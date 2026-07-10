@@ -120,10 +120,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       channels: [
         {
           id: 'ai-assist',
-          name: 'Expanse AI Assistant',
+          name: 'Xpanse AI Assistant',
           isAI: true,
           messages: [
-            { sender: 'Expanse AI', text: 'Hello! I am your native workspace co-pilot. I can analyze sprint statuses, draft messages, or answer technical questions. How can I help you today?', time: 'Just now' }
+            { sender: 'Xpanse AI', text: 'Hello! I am your native workspace co-pilot. I can analyze sprint statuses, draft messages, or answer technical questions. How can I help you today?', time: 'Just now' }
           ]
         },
         {
@@ -146,7 +146,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         {
           id: 1,
           author: 'Alex M. (Workspace Owner)',
-          text: 'Welcome to our new unified Expanse! Use this space to map out our Kanban tickets and hold chats. Pinpoint permissions inside specific channels to secure our environment.',
+          text: 'Welcome to our new unified Xpanse! Use this space to map out our Kanban tickets and hold chats. Pinpoint permissions inside specific channels to secure our environment.',
           time: '2 hours ago'
         }
       ]
@@ -180,10 +180,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       channels: [
         {
           id: 'ai-assist',
-          name: 'Expanse AI Assistant',
+          name: 'Xpanse AI Assistant',
           isAI: true,
           messages: [
-            { sender: 'Expanse AI', text: 'Joined shared space workspace. I can help coordinate notes.', time: 'Just now' }
+            { sender: 'Xpanse AI', text: 'Joined shared space workspace. I can help coordinate notes.', time: 'Just now' }
           ]
         },
         {
@@ -286,7 +286,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     if (activeChannel?.isAI) {
       setTimeout(() => {
         const aiMsg = {
-          sender: 'Expanse AI',
+          sender: 'Xpanse AI',
           text: `Analyzing: "${newMessage}". I will process this once our FastAPI endpoint is wired. Let me know if you would like me to draft a task instead.`,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
@@ -573,7 +573,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                           className={`flex items-center gap-2.5 w-full py-2 px-3 rounded-lg text-xs font-semibold border transition-all ${activeChannelId === aiChan.id ? 'bg-gradient-to-r from-purple-500/20 to-indigo-500/20 text-purple-300 border-purple-500/30' : 'bg-neutral-900/40 border-white/[0.04] text-neutral-400 hover:text-white'}`}
                         >
                           <Sparkles className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
-                          <span>Expanse AI Assistant</span>
+                          <span>Xpanse AI Assistant</span>
                         </button>
                       ))}
 
@@ -633,7 +633,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                 <Compass className="h-6 w-6 animate-pulse" />
               </div>
               <h2 className="font-display text-3xl font-extrabold tracking-tight text-white">
-                Welcome to your Expanse.
+                Welcome to your Xpanse.
               </h2>
               <p className="mt-4 text-sm text-neutral-400 leading-relaxed max-w-md">
                 Every great project starts with a single space. Create a workspace for your team or enter an invitation link to collaborate.
@@ -899,7 +899,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   <form onSubmit={handleSendMessage} className="p-4 border-t border-white/[0.05] bg-[#070709]/30 flex gap-2 flex-shrink-0">
                     <input
                       type="text"
-                      placeholder={activeChannel.isAI ? "Ask Expanse AI anything..." : `Message #${activeChannel.name}...`}
+                      placeholder={activeChannel.isAI ? "Ask Xpanse AI anything..." : `Message #${activeChannel.name}...`}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       className="flex-grow bg-neutral-950 border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors"

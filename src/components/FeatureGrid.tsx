@@ -76,7 +76,7 @@ export const FeatureGrid: React.FC = () => {
     setTimeout(() => {
       setChatMessages(prev => [...prev, {
         id: Date.now() + 1,
-        sender: 'Expanse Bot',
+        sender: 'Xpanse Bot',
         initial: 'EB',
         text: '🚀 Message broadcast successfully across Unified Space.',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

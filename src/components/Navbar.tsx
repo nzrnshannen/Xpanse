@@ -27,7 +27,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLoginClick, onSignupClick }) =
             <div className="absolute inset-0 -z-10 rounded-lg bg-purple-500/20 opacity-0 blur transition-opacity duration-300 group-hover:opacity-100" />
           </div>
           <span className="font-display text-xl font-bold tracking-tight text-white transition-colors duration-300 group-hover:text-purple-300">
-            Expanse
+            Xpanse
           </span>
         </a>
 

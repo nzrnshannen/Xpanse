@@ -8,13 +8,13 @@ class Settings(BaseSettings):
     Application Settings loader using Pydantic Settings.
     Automatically reads environment variables from .env if present.
     """
-    PROJECT_NAME: str = "Expanse Collaboration API"
+    PROJECT_NAME: str = "Xpanse Collaboration API"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     DEBUG: bool = True
 
     # Database
-    DATABASE_URL: str = Field(default="sqlite:///./expanse.db")
+    DATABASE_URL: str = Field(default="sqlite:///./xpanse.db")
 
     # Security
     SECRET_KEY: str = Field(default="8cf2e7d7054fcfb2b73ebf1c32729a67448e91456d2ee61a6b0c2d3fbdf2db56")

@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # Initialize FastAPI App
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Backend API powering rooms, boards, and real-time collaboration updates in Expanse.",
+    description="Backend API powering rooms, boards, and real-time collaboration updates in Xpanse.",
     version="1.0.0",
     lifespan=lifespan,
     debug=settings.DEBUG,
@@ -47,5 +47,5 @@ async def root() -> dict[str, str]:
     """
     return {
         "status": "online",
-        "message": "Welcome to Expanse Collaboration API. Access API docs at /docs or /redoc."
+        "message": "Welcome to Xpanse Collaboration API. Access API docs at /docs or /redoc."
     }

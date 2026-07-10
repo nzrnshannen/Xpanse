@@ -54,7 +54,7 @@ const App: React.FC = () => {
               Powering FastAPI & React Ecosystems
             </h3>
             <p className="mt-4 text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
-              Expanse utilizes highly-optimized WebSocket runtimes under FastAPI to coordinate real-time board updates and chat logs instantly to React clients.
+              Xpanse utilizes highly-optimized WebSocket runtimes under FastAPI to coordinate real-time board updates and chat logs instantly to React clients.
             </p>
             <div className="mt-8 flex justify-center items-center gap-6">
               <span className="text-xs text-neutral-500 border border-white/[0.05] rounded-full px-3.5 py-1.5 bg-neutral-900/50">
@@ -75,7 +75,7 @@ const App: React.FC = () => {
             <div className="flex h-6 w-6 items-center justify-center rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
               <Compass className="h-3.5 w-3.5" />
             </div>
-            <span className="font-display font-bold text-white tracking-tight text-sm">Expanse</span>
+            <span className="font-display font-bold text-white tracking-tight text-sm">Xpanse</span>
           </div>
           
           <div className="flex items-center gap-8">
@@ -98,7 +98,7 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="mx-auto max-w-7xl px-6 sm:px-8 mt-8 pt-8 border-t border-white/[0.03] text-center text-[10px]">
-          &copy; {new Date().getFullYear()} Expanse Technologies, Inc. All rights reserved.
+          &copy; {new Date().getFullYear()} Xpanse Technologies, Inc. All rights reserved.
         </div>
       </footer>
 

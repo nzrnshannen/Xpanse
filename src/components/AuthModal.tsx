@@ -169,7 +169,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                 {/* Header */}
                 <div className="mb-8">
                   <h3 className="font-display text-2xl font-bold text-white">
-                    {mode === 'login' ? 'Welcome back to Expanse' : 'Create your Space'}
+                    {mode === 'login' ? 'Welcome back to Xpanse' : 'Create your Space'}
                   </h3>
                   <p className="text-sm text-neutral-400 mt-2">
                     {mode === 'login' 

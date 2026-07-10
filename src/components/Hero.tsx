@@ -23,7 +23,7 @@ export const Hero: React.FC<HeroProps> = ({ onGetStartedClick, onJoinInviteClick
           className="inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-4 py-1.5 text-xs text-purple-200 backdrop-blur-sm mb-6"
         >
           <span className="flex h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
-          Introducing Expanse 1.0 — Unified Team Horizons
+          Introducing Xpanse 1.0 — Unified Team Horizons
         </motion.div>
 
         {/* Main Title & Tagline */}
@@ -34,7 +34,7 @@ export const Hero: React.FC<HeroProps> = ({ onGetStartedClick, onJoinInviteClick
           className="font-display text-5xl font-extrabold tracking-tight text-white sm:text-7xl lg:text-8xl"
         >
           <span className="bg-gradient-to-b from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
-            Expanse
+            Xpanse
           </span>
         </motion.h1>
 
@@ -97,7 +97,7 @@ export const Hero: React.FC<HeroProps> = ({ onGetStartedClick, onJoinInviteClick
                 <span className="h-3 w-3 rounded-full bg-neutral-800" />
                 <span className="h-3 w-3 rounded-full bg-neutral-800" />
               </div>
-              <div className="text-[10px] text-neutral-500 font-mono tracking-wider">workspace.expanse.app</div>
+              <div className="text-[10px] text-neutral-500 font-mono tracking-wider">workspace.xpanse.app</div>
               <div className="w-12" />
             </div>
             

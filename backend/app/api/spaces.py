@@ -95,7 +95,7 @@ async def generate_invite(
     Generates a secure invite link to join this Space workspace.
     """
     return InviteCodeResponse(
-        invite_link=f"https://expanse.app/join/space_{space_id}_key_xyz",
+        invite_link=f"https://xpanse.app/join/space_{space_id}_key_xyz",
         space_id=space_id
     )
 
@@ -116,7 +116,7 @@ async def websocket_ai_chat_endpoint(websocket: WebSocket, space_id: int) -> Non
     ]
     
     system_prompt = (
-        "You are Expanse AI, a helpful native workspace co-pilot built for the team collaboration tool 'Expanse'. "
+        "You are Xpanse AI, a helpful native workspace co-pilot built for the team collaboration tool 'Xpanse'. "
         "You have access to the current space's Kanban board tasks. Here is the list of current tasks on the board:\n"
         f"{mock_tasks}\n\n"
         "Use this context to help answer user questions. For example, if they ask about progress or task states, reference this board. "

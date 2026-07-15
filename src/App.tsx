@@ -70,24 +70,16 @@ const App: React.FC = () => {
 
       {/* Modern, Minimalist Footer */}
       <footer className="border-t border-white/[0.05] bg-black py-12 text-xs text-neutral-500">
-        <div className="mx-auto max-w-7xl px-6 sm:px-8 grid grid-cols-1 sm:grid-cols-3 items-center gap-6">
-          <div className="flex justify-center sm:justify-start">
-            <div className="flex items-center justify-center w-6 h-6">
-              <img src="/logo.svg" alt="XE Logo" className="w-full h-full drop-shadow-sm" />
-            </div>
-          </div>
-          
-          <div className="flex justify-center items-center gap-8">
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-          </div>
-
-          {/* Empty div to balance the grid and keep the center column perfectly centered */}
-          <div className="hidden sm:block"></div>
+        <div className="mx-auto max-w-7xl px-6 sm:px-8 flex justify-center items-center gap-8">
+          <a href="#features" className="hover:text-white transition-colors">Features</a>
+          <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+          <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
         </div>
-        <div className="mx-auto max-w-7xl px-6 sm:px-8 mt-8 pt-8 border-t border-white/[0.03] text-center text-[10px]">
-          &copy; {new Date().getFullYear()} Xpanse Technologies, Inc. All rights reserved.
+        <div className="mx-auto max-w-7xl px-6 sm:px-8 mt-8 pt-8 border-t border-white/[0.03] flex flex-col sm:flex-row items-center justify-center gap-3 text-center text-[10px]">
+          <div className="flex items-center justify-center w-5 h-5">
+            <img src="/logo.svg" alt="XE Logo" className="w-full h-full drop-shadow-sm opacity-80" />
+          </div>
+          <span>&copy; {new Date().getFullYear()} Xpanse Technologies, Inc. All rights reserved.</span>
         </div>
       </footer>
 

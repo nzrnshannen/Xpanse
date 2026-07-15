@@ -59,6 +59,13 @@ export const Notes: React.FC = () => {
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [newInviteRole, setNewInviteRole] = useState<'editor' | 'viewer'>('viewer');
 
+  // Delete confirmation states
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  
+  // Undo state for tabs
+  const [undoData, setUndoData] = useState<{ chapter: Chapter, noteId: string } | null>(null);
+  const undoTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const activeNote = notes.find(n => n.id === activeNoteId);
   const activeChapter = activeNote?.chapters.find(c => c.id === activeChapterId) || activeNote?.chapters[0];
 
@@ -128,6 +135,74 @@ export const Notes: React.FC = () => {
     setNotes(updatedNotes);
   };
 
+  const handleDeleteNote = (noteId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (userRole === 'viewer') return;
+    setNoteToDelete(noteId);
+  };
+
+  const confirmDeleteNote = () => {
+    if (!noteToDelete) return;
+    const updatedNotes = notes.filter(n => n.id !== noteToDelete);
+    setNotes(updatedNotes);
+    if (activeNoteId === noteToDelete) {
+      setActiveNoteId(updatedNotes.length > 0 ? updatedNotes[0].id : null);
+    }
+    setNoteToDelete(null);
+  };
+
+  const handleDeleteChapter = (chapterId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (userRole === 'viewer' || !activeNote) return;
+    
+    const chapterToDelete = activeNote.chapters.find(c => c.id === chapterId);
+    if (!chapterToDelete) return;
+
+    // Remove it immediately
+    const updatedChapters = activeNote.chapters.filter(c => c.id !== chapterId);
+    const updatedNotes = notes.map(n => {
+      if (n.id === activeNoteId) {
+        return { ...n, chapters: updatedChapters };
+      }
+      return n;
+    });
+    setNotes(updatedNotes);
+    
+    if (activeChapterId === chapterId) {
+      setActiveChapterId(updatedChapters.length > 0 ? updatedChapters[0].id : null);
+    }
+
+    // Set up Undo Toast
+    setUndoData({ chapter: chapterToDelete, noteId: activeNoteId });
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    undoTimeoutRef.current = setTimeout(() => {
+      setUndoData(null);
+    }, 5000); // Hide after 5 seconds
+  };
+
+  const handleUndoDelete = () => {
+    if (!undoData) return;
+    
+    const updatedNotes = notes.map(n => {
+      if (n.id === undoData.noteId) {
+        // Insert it back in its original order if possible, or just push and sort
+        const newChapters = [...n.chapters, undoData.chapter].sort((a, b) => a.order_index - b.order_index);
+        return { ...n, chapters: newChapters };
+      }
+      return n;
+    });
+    
+    setNotes(updatedNotes);
+    
+    // Switch back to it if we're on the same note
+    if (activeNoteId === undoData.noteId) {
+      setActiveChapterId(undoData.chapter.id);
+    }
+    
+    setUndoData(null);
+    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+  };
+
   const handleInvite = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newInviteEmail.trim()) return;
@@ -164,13 +239,22 @@ export const Notes: React.FC = () => {
             <button
               key={note.id}
               onClick={() => setActiveNoteId(note.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-md transition-all truncate text-sm
+              className={`w-full text-left px-3 py-2.5 rounded-md transition-all text-sm group flex items-center justify-between
                 ${activeNoteId === note.id 
                   ? 'bg-purple-500/10 text-purple-100 border border-purple-500/20' 
                   : 'text-neutral-400 hover:bg-white/5 hover:text-neutral-200 border border-transparent'
                 }`}
             >
-              {note.title || 'Untitled Note'}
+              <span className="truncate">{note.title || 'Untitled Note'}</span>
+              {userRole !== 'viewer' && (
+                <div 
+                  onClick={(e) => handleDeleteNote(note.id, e)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded-md transition-all text-neutral-500 hover:text-red-400"
+                  title="Delete Note"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </div>
+              )}
             </button>
           ))}
           {notes.length === 0 && (
@@ -222,7 +306,7 @@ export const Notes: React.FC = () => {
                     <button
                       key={chapter.id}
                       onClick={() => setActiveChapterId(chapter.id)}
-                      className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors
+                      className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 group
                         ${activeChapter?.id === chapter.id
                           ? 'border-purple-500 text-white bg-white/5 rounded-t-md'
                           : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-white/5 rounded-t-md'
@@ -237,7 +321,15 @@ export const Notes: React.FC = () => {
                            autoFocus
                          />
                       ) : (
-                         chapter.title || 'Untitled'
+                         <span>{chapter.title || 'Untitled'}</span>
+                      )}
+                      {userRole !== 'viewer' && (
+                        <div 
+                          onClick={(e) => handleDeleteChapter(chapter.id, e)}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded-full hover:bg-white/10 transition-colors text-neutral-500 hover:text-neutral-300"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </div>
                       )}
                     </button>
                   ))}
@@ -381,6 +473,82 @@ export const Notes: React.FC = () => {
 
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal (Only for entire notes now) */}
+      <AnimatePresence>
+        {noteToDelete && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setNoteToDelete(null)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative w-full max-w-sm bg-[#121212] border border-red-500/20 rounded-xl shadow-2xl p-6 overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-red-500/50" />
+              <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-red-400" />
+                Confirm Deletion
+              </h3>
+              
+              <p className="text-neutral-400 text-sm mb-8 leading-relaxed">
+                Are you sure you want to delete this note? This action cannot be undone and will delete all chapters inside.
+              </p>
+
+              <div className="flex items-center justify-end gap-3">
+                <button 
+                  onClick={() => setNoteToDelete(null)}
+                  className="px-4 py-2 rounded-md text-sm font-medium text-neutral-300 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDeleteNote}
+                  className="px-4 py-2 rounded-md text-sm font-medium bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white border border-red-500/30 transition-colors"
+                >
+                  Delete Note
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Undo Toast */}
+      <AnimatePresence>
+        {undoData && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-4 bg-[#1e1e1e] border border-white/10 shadow-2xl px-4 py-3 rounded-lg"
+          >
+            <span className="text-sm text-neutral-300">Chapter deleted</span>
+            <div className="w-px h-4 bg-white/10" />
+            <button
+              onClick={handleUndoDelete}
+              className="text-sm font-medium text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Undo
+            </button>
+            <button 
+              onClick={() => {
+                setUndoData(null);
+                if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+              }}
+              className="ml-2 text-neutral-500 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -91,9 +91,27 @@ class Note(SQLModel, table=True):
     space_id: int = Field(foreign_key="spaces.id", ondelete="CASCADE")
     owner_id: int = Field(foreign_key="users.id", ondelete="CASCADE")
     title: str
-    content: str = Field(default="")
 
     # Relational Links
     space: Space = Relationship(back_populates="notes")
     owner: User = Relationship()
     collaborators: List[User] = Relationship(back_populates="notes", link_model=NoteCollaboratorLink)
+    chapters: List["NoteChapter"] = Relationship(
+        back_populates="note", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "order_by": "NoteChapter.order_index"}
+    )
+
+class NoteChapter(SQLModel, table=True):
+    """
+    NoteChapter represents an individual tab/chapter within a Note.
+    """
+    __tablename__ = "note_chapters"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    note_id: int = Field(foreign_key="notes.id", ondelete="CASCADE")
+    title: str
+    content: str = Field(default="")
+    order_index: int = Field(default=0)
+
+    # Relational Links
+    note: Note = Relationship(back_populates="chapters")

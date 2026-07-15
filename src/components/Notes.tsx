@@ -5,10 +5,17 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 
-interface Note {
+interface Chapter {
   id: string;
   title: string;
   content: string;
+  order_index: number;
+}
+
+interface Note {
+  id: string;
+  title: string;
+  chapters: Chapter[];
 }
 
 interface Collaborator {
@@ -19,10 +26,24 @@ interface Collaborator {
 export const Notes: React.FC = () => {
   // Mock Data
   const [notes, setNotes] = useState<Note[]>([
-    { id: '1', title: 'Product Requirements', content: 'Notes on the new collaboration features...' },
-    { id: '2', title: 'Meeting Minutes', content: 'Discussion about the UI updates.' }
+    { 
+      id: '1', 
+      title: 'Product Requirements', 
+      chapters: [
+        { id: 'c1', title: 'Overview', content: '<p>Notes on the new collaboration features...</p>', order_index: 0 },
+        { id: 'c2', title: 'Design Specs', content: '<p>Figma links and design thoughts.</p>', order_index: 1 }
+      ]
+    },
+    { 
+      id: '2', 
+      title: 'Meeting Minutes', 
+      chapters: [
+        { id: 'c3', title: 'Weekly Sync', content: '<p>Discussion about the UI updates.</p>', order_index: 0 }
+      ]
+    }
   ]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>('1');
+  const [activeChapterId, setActiveChapterId] = useState<string | null>('c1');
   
   // Mock Role ('owner', 'editor', 'viewer')
   const [userRole, setUserRole] = useState<'owner' | 'editor' | 'viewer'>('owner');
@@ -39,20 +60,72 @@ export const Notes: React.FC = () => {
   const [newInviteRole, setNewInviteRole] = useState<'editor' | 'viewer'>('viewer');
 
   const activeNote = notes.find(n => n.id === activeNoteId);
+  const activeChapter = activeNote?.chapters.find(c => c.id === activeChapterId) || activeNote?.chapters[0];
+
+  // Auto-switch to first chapter when active note changes
+  React.useEffect(() => {
+    if (activeNote && activeNote.chapters.length > 0) {
+      if (!activeNote.chapters.find(c => c.id === activeChapterId)) {
+        setActiveChapterId(activeNote.chapters[0].id);
+      }
+    } else {
+      setActiveChapterId(null);
+    }
+  }, [activeNoteId, activeNote, activeChapterId]);
 
   const handleCreateNote = () => {
-    const newNote = {
+    const newNote: Note = {
       id: Date.now().toString(),
       title: '',
-      content: ''
+      chapters: [
+        { id: Date.now().toString() + 'c', title: 'Untitled Chapter', content: '', order_index: 0 }
+      ]
     };
     setNotes([...notes, newNote]);
     setActiveNoteId(newNote.id);
   };
 
-  const handleUpdateNote = (field: 'title' | 'content', value: string) => {
+  const handleUpdateNoteTitle = (value: string) => {
     if (userRole === 'viewer') return;
-    setNotes(notes.map(n => n.id === activeNoteId ? { ...n, [field]: value } : n));
+    setNotes(notes.map(n => n.id === activeNoteId ? { ...n, title: value } : n));
+  };
+
+  const handleCreateChapter = () => {
+    if (userRole === 'viewer' || !activeNote) return;
+    const newChapter: Chapter = {
+      id: Date.now().toString() + 'c',
+      title: 'New Chapter',
+      content: '',
+      order_index: activeNote.chapters.length
+    };
+    const updatedNotes = notes.map(n => {
+      if (n.id === activeNoteId) {
+        return { ...n, chapters: [...n.chapters, newChapter] };
+      }
+      return n;
+    });
+    setNotes(updatedNotes);
+    setActiveChapterId(newChapter.id);
+  };
+
+  const handleUpdateChapter = (field: 'title' | 'content', value: string) => {
+    if (userRole === 'viewer' || !activeNote || !activeChapter) return;
+    
+    // Simulate auto-save logging for content changes
+    if (field === 'content') {
+      console.log("Saving chapter content...");
+    }
+
+    const updatedNotes = notes.map(n => {
+      if (n.id === activeNoteId) {
+        return {
+          ...n,
+          chapters: n.chapters.map(c => c.id === activeChapter.id ? { ...c, [field]: value } : c)
+        };
+      }
+      return n;
+    });
+    setNotes(updatedNotes);
   };
 
   const handleInvite = (e: React.FormEvent) => {
@@ -137,21 +210,59 @@ export const Notes: React.FC = () => {
                 <input
                   type="text"
                   value={activeNote.title}
-                  onChange={(e) => handleUpdateNote('title', e.target.value)}
+                  onChange={(e) => handleUpdateNoteTitle(e.target.value)}
                   readOnly={userRole === 'viewer'}
                   placeholder="Note Title"
-                  className="w-full bg-transparent text-4xl font-bold text-white placeholder-neutral-700 outline-none mb-8"
+                  className="w-full bg-transparent text-4xl font-bold text-white placeholder-neutral-700 outline-none mb-6"
                 />
+
+                {/* Tab Navigation Bar */}
+                <div className="flex items-center gap-1 border-b border-white/10 mb-8 pb-[1px] overflow-x-auto no-scrollbar">
+                  {activeNote.chapters.map((chapter) => (
+                    <button
+                      key={chapter.id}
+                      onClick={() => setActiveChapterId(chapter.id)}
+                      className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors
+                        ${activeChapter?.id === chapter.id
+                          ? 'border-purple-500 text-white bg-white/5 rounded-t-md'
+                          : 'border-transparent text-neutral-400 hover:text-neutral-200 hover:bg-white/5 rounded-t-md'
+                        }`}
+                    >
+                      {activeChapter?.id === chapter.id && userRole !== 'viewer' ? (
+                         <input
+                           type="text"
+                           value={chapter.title}
+                           onChange={(e) => handleUpdateChapter('title', e.target.value)}
+                           className="bg-transparent outline-none w-auto max-w-[120px]"
+                           autoFocus
+                         />
+                      ) : (
+                         chapter.title || 'Untitled'
+                      )}
+                    </button>
+                  ))}
+                  
+                  {userRole !== 'viewer' && (
+                    <button 
+                      onClick={handleCreateChapter}
+                      className="p-2 ml-1 text-neutral-400 hover:text-white hover:bg-white/5 rounded-t-md transition-colors border-b-2 border-transparent"
+                      title="Add Chapter/Tab"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
                 {/* TipTap Rich Text Editor */}
                 <div className="w-full bg-transparent min-h-[60vh] text-lg text-neutral-300 placeholder-neutral-700 outline-none leading-relaxed prose prose-invert max-w-none">
-                  {userRole !== 'viewer' && activeNote && (
+                  {userRole !== 'viewer' && activeChapter && (
                     <TiptapEditor 
-                      content={activeNote.content} 
-                      onChange={(html) => handleUpdateNote('content', html)} 
+                      content={activeChapter.content} 
+                      onChange={(html) => handleUpdateChapter('content', html)} 
                     />
                   )}
-                  {userRole === 'viewer' && activeNote && (
-                    <div dangerouslySetInnerHTML={{ __html: activeNote.content }} className="min-h-[60vh]" />
+                  {userRole === 'viewer' && activeChapter && (
+                    <div dangerouslySetInnerHTML={{ __html: activeChapter.content }} className="min-h-[60vh]" />
                   )}
                 </div>
               </div>

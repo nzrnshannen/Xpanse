@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, KeyRound } from 'lucide-react';
+import { ArrowDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface HeroProps {
@@ -58,28 +58,20 @@ export const Hero: React.FC<HeroProps> = ({ onGetStartedClick, onJoinInviteClick
           Grant full access to your entire space, or pinpoint permissions down to a single room.
         </motion.p>
 
-        {/* CTA Buttons */}
+        {/* CTA Button */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-10 flex items-center justify-center"
         >
-          <button
-            onClick={onGetStartedClick}
-            className="group relative inline-flex h-12 items-center justify-center gap-1.5 overflow-hidden rounded-full bg-white px-6 font-semibold text-black transition-all hover:bg-neutral-200 w-full sm:w-auto cursor-pointer"
+          <a
+            href="#features"
+            className="group relative inline-flex h-12 items-center justify-center gap-2 overflow-hidden rounded-full bg-white px-8 font-semibold text-black transition-all hover:bg-neutral-200 cursor-pointer"
           >
-            Get Started
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </button>
-          
-          <button
-            onClick={onJoinInviteClick}
-            className="group inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.02] px-6 text-sm font-medium text-neutral-300 backdrop-blur-sm transition-all hover:border-white/[0.15] hover:bg-white/[0.05] hover:text-white w-full sm:w-auto cursor-pointer"
-          >
-            <KeyRound className="h-4 w-4 text-purple-400 transition-transform group-hover:-rotate-12" />
-            Join via Invite Link
-          </button>
+            Explore Features
+            <ArrowDown className="h-4 w-4 transition-transform group-hover:translate-y-1" />
+          </a>
         </motion.div>
 
         {/* Workspace Visual Preview Frame */}

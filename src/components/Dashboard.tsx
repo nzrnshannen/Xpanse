@@ -15,26 +15,43 @@ import {
   Hash, 
   MessageCircle, 
   Layers,
-  FileText
+  FileText,
+  Trash2,
+  Edit2,
+  GripVertical,
+  X
 } from 'lucide-react';
 
 import { Notes } from './Notes';
+import { TaskModal } from './TaskModal';
 
 interface DashboardProps {
   onLogout: () => void;
   userEmail: string;
 }
 
-interface Task {
+interface BoardColumn {
+  id: string;
+  name: string;
+  position: number;
+}
+
+export interface Task {
   id: string;
   title: string;
-  column: 'todo' | 'progress' | 'done';
+  column_id: string;
   category: string;
+  position: number;
+  description?: string;
+  assignee?: string;
+  label?: string;
+  due_date?: string;
 }
 
 interface MockBoard {
   id: string;
   name: string;
+  columns: BoardColumn[];
   tasks: Task[];
 }
 
@@ -77,23 +94,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [currentView, setCurrentView] = useState<'home' | 'boards_list' | 'kanban' | 'chats' | 'notes'>('home');
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   // Modal control states
-  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | null>(null);
+  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | null>(null);
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
   const [inviteToken, setInviteToken] = useState('');
   const [newBoardName, setNewBoardName] = useState('');
   const [newChatName, setNewChatName] = useState('');
+  const [newColumnName, setNewColumnName] = useState('');
+  const [newColumnError, setNewColumnError] = useState('');
+  const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
+  const [columnToEdit, setColumnToEdit] = useState<{id: string, name: string} | null>(null);
+  const [dragOverColId, setDragOverColId] = useState<string | null>(null);
 
   // Interactive UI Inputs
   const [newMessage, setNewMessage] = useState('');
   const [newFeedPost, setNewFeedPost] = useState('');
 
+  // Undo State
+  const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
+
+  // Draft Task State
+  const [draftTask, setDraftTask] = useState<Task | null>(null);
+
   const activeSpace = spaces.find(s => s.id === activeSpaceId);
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
   const activeChannel = activeSpace?.channels.find(c => c.id === activeChannelId);
+  const activeTask = activeBoard?.tasks.find(t => t.id === activeTaskId);
 
   // 1. Action Handler: Create Space
   const handleCreateSpace = (e: React.FormEvent) => {
@@ -107,17 +137,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         {
           id: 'b1',
           name: 'Sprint 1 Core Board',
+          columns: [
+            { id: 'c1', name: 'To Do', position: 0 },
+            { id: 'c2', name: 'In Progress', position: 1 },
+            { id: 'c3', name: 'Done', position: 2 }
+          ],
           tasks: [
-            { id: 't1', title: 'Plan core workspace routes', column: 'todo', category: 'Dev' },
-            { id: 't2', title: 'Write FastAPI WebSocket models', column: 'progress', category: 'Backend' },
-            { id: 't3', title: 'Finalize Tailwind design tokens', column: 'done', category: 'Design' }
+            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0 },
+            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0 },
+            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0 }
           ]
         },
         {
           id: 'b2',
           name: 'Marketing Launch Strategy',
+          columns: [
+            { id: 'c4', name: 'To Do', position: 0 },
+            { id: 'c5', name: 'In Progress', position: 1 },
+            { id: 'c6', name: 'Done', position: 2 }
+          ],
           tasks: [
-            { id: 't4', title: 'Set up Google Analytics', column: 'todo', category: 'Marketing' }
+            { id: 't4', title: 'Set up Google Analytics', column_id: 'c4', category: 'Marketing', position: 0 }
           ]
         }
       ],
@@ -176,8 +216,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         {
           id: 'bj1',
           name: 'Frontend Assets Sync',
+          columns: [
+            { id: 'cj1', name: 'To Do', position: 0 },
+            { id: 'cj2', name: 'In Progress', position: 1 },
+            { id: 'cj3', name: 'Done', position: 2 }
+          ],
           tasks: [
-            { id: 'tj1', title: 'Review Tailwind v4 build guidelines', column: 'todo', category: 'Design' }
+            { id: 'tj1', title: 'Review Tailwind v4 build guidelines', column_id: 'cj1', category: 'Design', position: 0 }
           ]
         }
       ],
@@ -222,8 +267,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     if (!newBoardName.trim() || !activeSpaceId) return;
 
     const newBoard: MockBoard = {
-      id: `b-${Date.now()}`,
+      id: Date.now().toString(),
       name: newBoardName,
+      columns: [
+        { id: Date.now().toString() + 'c1', name: 'To Do', position: 0 },
+        { id: Date.now().toString() + 'c2', name: 'In Progress', position: 1 },
+        { id: Date.now().toString() + 'c3', name: 'Done', position: 2 }
+      ],
       tasks: []
     };
 
@@ -334,9 +384,236 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setNewFeedPost('');
   };
 
-  // 7. Action Handler: Move Kanban Task
-  const handleMoveTask = (taskId: string) => {
+  // 7. Kanban Handlers
+  const handleAddColumnSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewColumnError('');
+    if (!newColumnName.trim() || !activeBoard) return;
+
+    // Check for duplicates
+    const isDuplicate = activeBoard.columns.some(
+      c => c.name.toLowerCase() === newColumnName.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      setNewColumnError(`A column named "${newColumnName.trim()}" already exists.`);
+      return;
+    }
+
+    handleAddColumn(newColumnName.trim());
+    setNewColumnName('');
+    setActiveActionModal(null);
+  };
+
+  const handleEditColumnSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewColumnError('');
+    if (!columnToEdit || !activeBoard) return;
+
+    // Check for duplicates ignoring itself
+    const isDuplicate = activeBoard.columns.some(
+      c => c.id !== columnToEdit.id && c.name.toLowerCase() === columnToEdit.name.trim().toLowerCase()
+    );
+
+    if (isDuplicate) {
+      setNewColumnError(`A column named "${columnToEdit.name.trim()}" already exists.`);
+      return;
+    }
+
+    handleUpdateColumn(columnToEdit.id, columnToEdit.name.trim());
+    setColumnToEdit(null);
+    setActiveActionModal(null);
+  };
+
+  const handleConfirmDeleteColumn = () => {
+    if (columnToDelete) {
+      handleDeleteColumn(columnToDelete);
+    }
+    setColumnToDelete(null);
+    setActiveActionModal(null);
+  };
+
+  const handleAddColumn = (columnName: string) => {
+    if (!activeSpaceId || !activeBoardId || !columnName.trim()) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              const newPos = b.columns.length > 0 ? Math.max(...b.columns.map(c => c.position)) + 1 : 0;
+              const newCol: BoardColumn = {
+                id: Date.now().toString(),
+                name: columnName,
+                position: newPos
+              };
+              return { ...b, columns: [...b.columns, newCol].sort((x, y) => x.position - y.position) };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleUpdateColumn = (colId: string, newName: string) => {
     if (!activeSpaceId || !activeBoardId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              return {
+                ...b,
+                columns: b.columns.map(c => c.id === colId ? { ...c, name: newName } : c)
+              };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleDeleteColumn = (colId: string) => {
+    if (!activeSpaceId || !activeBoardId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              const remaining = b.columns.filter(c => c.id !== colId).sort((x, y) => x.position - y.position);
+              const firstColId = remaining.length > 0 ? remaining[0].id : null;
+              
+              const updatedTasks = b.tasks.map(t => {
+                if (t.column_id === colId) {
+                  return { ...t, column_id: firstColId || '' };
+                }
+                return t;
+              });
+
+              return { ...b, columns: remaining, tasks: updatedTasks };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleColumnReorder = (draggedColumnId: string, targetIndex: number) => {
+    if (!activeSpaceId || !activeBoardId) return;
+    console.log(`Mocking PUT /reorder payload: { column_id: ${draggedColumnId}, new_position: ${targetIndex} }`);
+    
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              const currentCols = [...b.columns].sort((x, y) => x.position - y.position);
+              const draggedColIndex = currentCols.findIndex(c => c.id === draggedColumnId);
+              if (draggedColIndex === -1) return b;
+              
+              const [draggedCol] = currentCols.splice(draggedColIndex, 1);
+              currentCols.splice(targetIndex, 0, draggedCol);
+              
+              const newCols = currentCols.map((c, idx) => ({ ...c, position: idx }));
+              return { ...b, columns: newCols };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleTaskDrop = (taskId: string, targetColumnId: string, targetTaskId?: string) => {
+    if (!activeSpaceId || !activeBoardId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              const taskToMove = b.tasks.find(t => t.id === taskId);
+              if (!taskToMove) return b;
+
+              // Filter out the task being moved
+              let newTasks = b.tasks.filter(t => t.id !== taskId);
+
+              // Get tasks in target column sorted by position
+              const targetColTasks = newTasks
+                .filter(t => t.column_id === targetColumnId)
+                .sort((x, y) => x.position - y.position);
+
+              if (targetTaskId) {
+                // Find index of target task and insert before it
+                const targetIndex = targetColTasks.findIndex(t => t.id === targetTaskId);
+                if (targetIndex !== -1) {
+                  targetColTasks.splice(targetIndex, 0, { ...taskToMove, column_id: targetColumnId });
+                } else {
+                  targetColTasks.push({ ...taskToMove, column_id: targetColumnId });
+                }
+              } else {
+                // Append to end
+                targetColTasks.push({ ...taskToMove, column_id: targetColumnId });
+              }
+              
+              // Normalize positions
+              targetColTasks.forEach((t, i) => t.position = i);
+
+              // Merge back
+              const otherTasks = newTasks.filter(t => t.column_id !== targetColumnId);
+              return {
+                ...b,
+                tasks: [...otherTasks, ...targetColTasks]
+              };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleUpdateTask = (updatedTask: Task) => {
+    if (!activeSpaceId || !activeBoardId) return;
+
+    if (draftTask && updatedTask.id === draftTask.id) {
+      if (!updatedTask.title.trim() && !updatedTask.description?.trim()) {
+        setDraftTask(null);
+        return;
+      }
+      if (!updatedTask.title.trim()) updatedTask.title = 'New Task';
+      
+      setSpaces(prev => prev.map(s => {
+        if (s.id === activeSpaceId) {
+          return {
+            ...s,
+            boards: s.boards.map(b => {
+              if (b.id === activeBoardId) {
+                return {
+                  ...b,
+                  tasks: [...b.tasks, updatedTask]
+                };
+              }
+              return b;
+            })
+          };
+        }
+        return s;
+      }));
+      setDraftTask(null);
+      return;
+    }
 
     setSpaces(prev => prev.map(s => {
       if (s.id === activeSpaceId) {
@@ -346,13 +623,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             if (b.id === activeBoardId) {
               return {
                 ...b,
-                tasks: b.tasks.map(t => {
-                  if (t.id === taskId) {
-                    const nextCol = t.column === 'todo' ? 'progress' : t.column === 'progress' ? 'done' : 'todo';
-                    return { ...t, column: nextCol };
-                  }
-                  return t;
-                })
+                tasks: b.tasks.map(t => t.id === updatedTask.id ? updatedTask : t)
               };
             }
             return b;
@@ -361,6 +632,81 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       }
       return s;
     }));
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    if (!activeSpaceId || !activeBoardId) return;
+
+    let taskToDelete: Task | undefined;
+
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              taskToDelete = b.tasks.find(t => t.id === taskId);
+              return {
+                ...b,
+                tasks: b.tasks.filter(t => t.id !== taskId)
+              };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+
+    if (taskToDelete) {
+      if (deletedTaskState?.timeoutId) clearTimeout(deletedTaskState.timeoutId);
+      
+      const timeoutId = window.setTimeout(() => {
+        setDeletedTaskState(null);
+      }, 5000);
+
+      setDeletedTaskState({ task: taskToDelete, timeoutId });
+      setActiveTaskId(null);
+    }
+  };
+
+  const handleUndoDeleteTask = () => {
+    if (!deletedTaskState || !activeSpaceId || !activeBoardId) return;
+    
+    clearTimeout(deletedTaskState.timeoutId);
+    
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === activeBoardId) {
+              return {
+                ...b,
+                tasks: [...b.tasks, deletedTaskState.task]
+              };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+    
+    setDeletedTaskState(null);
+  };
+
+  const handleCreateDraftTask = (columnId: string) => {
+    if (!activeSpaceId || !activeBoardId) return;
+    const newTaskId = `task-${Date.now()}`;
+    const newTask: Task = {
+      id: newTaskId,
+      title: '',
+      column_id: columnId,
+      category: 'Task',
+      position: activeBoard?.tasks.filter(t => t.column_id === columnId).length || 0,
+    };
+    setDraftTask(newTask);
   };
 
   return (
@@ -841,44 +1187,165 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                         {activeBoard.name}
                       </h3>
                     </div>
-                    <span className="text-[10px] text-neutral-500 font-medium">
-                      💡 Click a card to advance columns
-                    </span>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] text-neutral-500 font-medium hidden sm:inline-block">
+                        💡 Drag columns or tasks to move them
+                      </span>
+                      <button 
+                        onClick={() => {
+                          setNewColumnName('');
+                          setNewColumnError('');
+                          setActiveActionModal('add_column');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 text-xs font-bold hover:bg-purple-500/20 transition-colors border border-purple-500/20"
+                      >
+                        + Add Column
+                      </button>
+                    </div>
                   </div>
 
                   {/* Task Columns */}
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-y-auto pr-1">
-                    {['todo', 'progress', 'done'].map((column) => (
-                      <div key={column} className="rounded-xl border border-white/[0.05] bg-black/40 p-4 flex flex-col gap-3 h-full min-h-[300px]">
-                        <div className="text-xs font-bold text-neutral-400 uppercase tracking-wide border-b border-white/[0.04] pb-2 mb-1 flex justify-between items-center">
-                          <span>{column === 'todo' ? 'To Do' : column === 'progress' ? 'In Progress' : 'Done'}</span>
-                          <span className="h-5 w-5 text-[9px] bg-white/[0.04] rounded-full flex items-center justify-center font-bold text-neutral-500">
-                            {activeBoard.tasks.filter(t => t.column === column).length}
-                          </span>
+                  {/* Task Columns */}
+                  <div className="flex-1 flex gap-4 overflow-x-auto pb-4 pr-1 snap-x no-scrollbar">
+                    {activeBoard.columns.sort((a, b) => a.position - b.position).map((column, idx) => (
+                      <div 
+                        key={column.id} 
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('type', 'column');
+                          e.dataTransfer.setData('id', column.id);
+                        }}
+                        onDragEnd={() => setDragOverColId(null)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          if (dragOverColId !== column.id) setDragOverColId(column.id);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOverColId(null);
+                          const type = e.dataTransfer.getData('type');
+                          const draggedId = e.dataTransfer.getData('id');
+                          if (type === 'column' && draggedId && draggedId !== column.id) {
+                            handleColumnReorder(draggedId, idx);
+                          } else if (type === 'task' && draggedId) {
+                            handleTaskDrop(draggedId, column.id);
+                          }
+                        }}
+                        className={`snap-start flex-shrink-0 w-80 rounded-xl border bg-black/40 p-4 flex flex-col gap-3 h-full min-h-[300px] transition-colors ${dragOverColId === column.id ? 'border-purple-500/50 bg-purple-500/[0.02]' : 'border-white/[0.05]'}`}
+                      >
+                        <div className="group flex justify-between items-center border-b border-white/[0.04] pb-2 mb-1 cursor-grab active:cursor-grabbing">
+                          <div className="flex items-center gap-2">
+                            <GripVertical className="w-4 h-4 text-neutral-600 group-hover:text-neutral-400 transition-colors" />
+                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-wide">
+                              {column.name}
+                            </span>
+                            <span className="h-5 w-5 text-[9px] bg-white/[0.04] rounded-full flex items-center justify-center font-bold text-neutral-500">
+                              {activeBoard.tasks.filter(t => t.column_id === column.id).length}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => {
+                                setColumnToEdit({ id: column.id, name: column.name });
+                                setNewColumnError('');
+                                setActiveActionModal('edit_column');
+                              }}
+                              className="p-1 hover:bg-white/10 rounded text-neutral-500 hover:text-white"
+                              title="Rename Column"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setColumnToDelete(column.id);
+                                setActiveActionModal('delete_column');
+                              }}
+                              className="p-1 hover:bg-red-500/20 hover:text-red-400 rounded text-neutral-500 transition-colors"
+                              title="Delete Column"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="flex flex-col gap-2 flex-grow overflow-y-auto max-h-[420px] pr-0.5">
-                          {activeBoard.tasks.filter(t => t.column === column).map(task => (
+                        <div className="flex flex-col gap-2 flex-grow overflow-y-auto max-h-[500px] pr-0.5">
+                          {activeBoard.tasks.filter(t => t.column_id === column.id).sort((a,b) => a.position - b.position).map(task => (
                             <div
                               key={task.id}
-                              onClick={() => handleMoveTask(task.id)}
-                              className="p-3.5 rounded-lg bg-neutral-900 border border-white/[0.06] hover:border-purple-500/40 hover:bg-neutral-800 transition-all cursor-pointer group/card relative"
+                              draggable
+                              onDragStart={(e) => {
+                                e.stopPropagation();
+                                e.dataTransfer.setData('type', 'task');
+                                e.dataTransfer.setData('id', task.id);
+                              }}
+                              onDragEnd={() => setDragOverColId(null)}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (dragOverColId !== column.id) setDragOverColId(column.id);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDragOverColId(null);
+                                const type = e.dataTransfer.getData('type');
+                                const draggedId = e.dataTransfer.getData('id');
+                                if (type === 'task' && draggedId && draggedId !== task.id) {
+                                  handleTaskDrop(draggedId, column.id, task.id);
+                                } else if (type === 'column' && draggedId) {
+                                  const currentIdx = activeBoard.columns.findIndex(c => c.id === column.id);
+                                  handleColumnReorder(draggedId, currentIdx);
+                                }
+                              }}
+                              onMouseUp={() => setActiveTaskId(task.id)}
+                              className="p-3.5 rounded-lg bg-neutral-900 border border-white/[0.06] hover:border-purple-500/40 hover:bg-neutral-800 transition-all cursor-grab active:cursor-grabbing group/card relative flex flex-col gap-2"
                             >
-                              <span className="inline-block text-[8px] font-bold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded mb-2">
-                                {task.category}
-                              </span>
-                              <p className="text-xs font-medium text-neutral-200 leading-tight">{task.title}</p>
-                              <div className="absolute right-2.5 bottom-2.5 opacity-0 group-hover/card:opacity-100 transition-opacity">
-                                <ChevronRight className="h-3 w-3 text-neutral-400" />
+                              <div className="flex items-start justify-between">
+                                <span className="inline-block text-[8px] font-bold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                                  {task.label || task.category}
+                                </span>
                               </div>
+                              <p className="text-xs font-medium text-neutral-200 leading-tight">{task.title}</p>
+                              
+                              {/* Card Footer: Metadata Indicators */}
+                              {(task.description || task.due_date || task.assignee) && (
+                                <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center gap-3 text-[10px] text-neutral-500 font-medium">
+                                  {task.description && (
+                                    <div className="flex items-center gap-1" title="Has description">
+                                      <FileText className="w-3 h-3" />
+                                    </div>
+                                  )}
+                                  {task.due_date && (
+                                    <div className="flex items-center gap-1" title={`Due: ${task.due_date}`}>
+                                      <Calendar className="w-3 h-3" />
+                                      <span>{new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                  )}
+                                  {task.assignee && (
+                                    <div className="flex items-center gap-1 ml-auto" title={`Assignee: ${task.assignee}`}>
+                                      <div className="w-4 h-4 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-[8px] font-bold border border-purple-500/30">
+                                        {task.assignee.charAt(0).toUpperCase()}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
-                          {activeBoard.tasks.filter(t => t.column === column).length === 0 && (
-                            <div className="flex-1 border border-dashed border-white/[0.03] rounded-lg flex items-center justify-center text-neutral-600 text-[10px] italic py-8">
-                              No tasks
+                          {activeBoard.tasks.filter(t => t.column_id === column.id).length === 0 && (
+                            <div className={`flex-1 border border-dashed rounded-lg flex items-center justify-center text-[10px] italic py-8 transition-colors ${dragOverColId === column.id ? 'border-purple-500/50 text-purple-400 bg-purple-500/[0.02]' : 'border-white/[0.03] text-neutral-600'}`}>
+                              Drop tasks here
                             </div>
                           )}
                         </div>
+
+                        {/* Add Task Button */}
+                        <button
+                          onClick={() => handleCreateDraftTask(column.id)}
+                          className="mt-3 flex items-center justify-center gap-1.5 w-full py-2 rounded-lg border border-white/[0.03] bg-white/[0.02] hover:bg-white/[0.05] text-neutral-400 hover:text-white text-xs font-semibold transition-colors"
+                        >
+                          + Add Task
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1041,6 +1508,112 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                 </div>
               )}
 
+              {/* D. Add Column Dialog */}
+              {activeActionModal === 'add_column' && (
+                <div>
+                  <h3 className="text-sm font-bold text-white mb-1.5">Create a Column</h3>
+                  <p className="text-[11px] text-neutral-400 mb-4">Add a new Kanban status column to {activeBoard?.name}.</p>
+                  <form onSubmit={handleAddColumnSubmit} className="space-y-4">
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        value={newColumnName}
+                        onChange={(e) => {
+                          setNewColumnName(e.target.value);
+                          setNewColumnError('');
+                        }}
+                        placeholder="e.g. Backlog, Testing"
+                        className="w-full rounded-lg border border-white/[0.08] bg-neutral-900 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                      />
+                      {newColumnError && (
+                        <p className="text-[10px] text-red-400 mt-1.5">{newColumnError}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2 justify-end text-[11px] font-semibold">
+                      <button 
+                        type="button" 
+                        onClick={() => setActiveActionModal(null)}
+                        className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200"
+                      >
+                        Add Column
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* E. Edit Column Dialog */}
+              {activeActionModal === 'edit_column' && columnToEdit && (
+                <div>
+                  <h3 className="text-sm font-bold text-white mb-1.5">Rename Column</h3>
+                  <p className="text-[11px] text-neutral-400 mb-4">Rename this Kanban column.</p>
+                  <form onSubmit={handleEditColumnSubmit} className="space-y-4">
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        value={columnToEdit.name}
+                        onChange={(e) => {
+                          setColumnToEdit({ ...columnToEdit, name: e.target.value });
+                          setNewColumnError('');
+                        }}
+                        placeholder="e.g. Backlog, Testing"
+                        className="w-full rounded-lg border border-white/[0.08] bg-neutral-900 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
+                      />
+                      {newColumnError && (
+                        <p className="text-[10px] text-red-400 mt-1.5">{newColumnError}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2 justify-end text-[11px] font-semibold">
+                      <button 
+                        type="button" 
+                        onClick={() => setActiveActionModal(null)}
+                        className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* F. Delete Column Dialog */}
+              {activeActionModal === 'delete_column' && columnToDelete && (
+                <div>
+                  <h3 className="text-sm font-bold text-white mb-1.5">Delete Column</h3>
+                  <p className="text-[11px] text-neutral-400 mb-4">Are you sure you want to delete this column? Any tasks inside will automatically be moved to another column.</p>
+                  <div className="flex gap-2 justify-end text-[11px] font-semibold mt-4">
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveActionModal(null)}
+                      className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleConfirmDeleteColumn}
+                      className="px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                    >
+                      Yes, delete it
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* C. Add Project Board Dialog */}
               {activeActionModal === 'add_board' && (
                 <div>
@@ -1108,6 +1681,48 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               )}
 
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* G. Task Modal */}
+      {((activeTaskId && activeTask) || draftTask) && activeBoard && (
+        <TaskModal 
+          task={draftTask || activeTask!}
+          onClose={() => {
+            setActiveTaskId(null);
+            setDraftTask(null);
+          }}
+          onSave={handleUpdateTask}
+          onDelete={draftTask ? () => setDraftTask(null) : handleDeleteTask}
+        />
+      )}
+
+      {/* Undo Toast */}
+      <AnimatePresence>
+        {deletedTaskState && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className="fixed bottom-6 left-1/2 z-[60] bg-neutral-900 border border-white/[0.1] rounded-lg shadow-xl px-4 py-3 flex items-center gap-4"
+          >
+            <span className="text-sm font-medium text-neutral-200">Task deleted</span>
+            <button
+              onClick={handleUndoDeleteTask}
+              className="px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-md text-xs font-bold transition-colors"
+            >
+              Undo
+            </button>
+            <button 
+              onClick={() => {
+                clearTimeout(deletedTaskState.timeoutId);
+                setDeletedTaskState(null);
+              }}
+              className="text-neutral-500 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

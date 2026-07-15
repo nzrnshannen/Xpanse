@@ -64,7 +64,44 @@ class Board(SQLModel, table=True):
     # Relational Links
     space: Space = Relationship(back_populates="boards")
     members: List[User] = Relationship(back_populates="boards", link_model=BoardMemberLink)
+    columns: List["BoardColumn"] = Relationship(
+        back_populates="board",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "order_by": "BoardColumn.position"}
+    )
 
+class BoardColumn(SQLModel, table=True):
+    """
+    BoardColumn represents a dynamic status column in a Kanban board.
+    """
+    __tablename__ = "board_columns"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    board_id: int = Field(foreign_key="boards.id", ondelete="CASCADE")
+    name: str
+    position: int = Field(default=0)
+
+    # Relational Links
+    board: Board = Relationship(back_populates="columns")
+    tasks: List["Task"] = Relationship(
+        back_populates="column",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "order_by": "Task.position"}
+    )
+
+class Task(SQLModel, table=True):
+    """
+    Task represents an individual card within a Kanban board column.
+    """
+    __tablename__ = "tasks"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    column_id: int = Field(foreign_key="board_columns.id", ondelete="CASCADE")
+    title: str
+    description: Optional[str] = None
+    position: int = Field(default=0)
+    category: Optional[str] = Field(default="Task")
+
+    # Relational Links
+    column: BoardColumn = Relationship(back_populates="tasks")
 
 class Room(SQLModel, table=True):
     """

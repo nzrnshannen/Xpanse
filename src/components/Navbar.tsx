@@ -22,13 +22,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLoginClick, onSignupClick }) =
       <div className="mx-auto flex max-w-7xl h-16 items-center justify-between px-6 sm:px-8">
         {/* Left Side: Logo */}
         <a href="#" className="flex items-center gap-2.5 group">
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-purple-500/30 bg-purple-500/10 text-purple-400 transition-all duration-300 group-hover:border-purple-500/60 group-hover:bg-purple-500/20">
-            <Compass className="h-5 w-5 transition-transform duration-500 group-hover:rotate-45" />
-            <div className="absolute inset-0 -z-10 rounded-lg bg-purple-500/20 opacity-0 blur transition-opacity duration-300 group-hover:opacity-100" />
+          <div className="flex items-center justify-center w-8 h-8">
+            <img src="/logo.svg" alt="XE Logo" className="w-full h-full drop-shadow-md" />
           </div>
-          <span className="font-display text-xl font-bold tracking-tight text-white transition-colors duration-300 group-hover:text-purple-300">
-            Xpanse
-          </span>
         </a>
 
         {/* Center: Desktop Navigation Links */}

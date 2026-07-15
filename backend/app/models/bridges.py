@@ -28,3 +28,13 @@ class RoomMemberLink(SQLModel, table=True):
 
     room_id: int = Field(foreign_key="rooms.id", primary_key=True, ondelete="CASCADE")
     user_id: int = Field(foreign_key="users.id", primary_key=True, ondelete="CASCADE")
+
+class NoteCollaboratorLink(SQLModel, table=True):
+    """
+    Bridge table for User-to-Note collaboration relation.
+    """
+    __tablename__ = "note_collaborators"
+
+    note_id: int = Field(foreign_key="notes.id", primary_key=True, ondelete="CASCADE")
+    user_id: int = Field(foreign_key="users.id", primary_key=True, ondelete="CASCADE")
+    role: str = Field(default="viewer")  # 'editor' or 'viewer'

@@ -14,8 +14,11 @@ import {
   Sparkles, 
   Hash, 
   MessageCircle, 
-  Layers 
+  Layers,
+  FileText
 } from 'lucide-react';
+
+import { Notes } from './Notes';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -71,7 +74,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Main Active Area view state
-  const [currentView, setCurrentView] = useState<'home' | 'boards_list' | 'kanban' | 'chats'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'boards_list' | 'kanban' | 'chats' | 'notes'>('home');
   const [activeBoardId, setActiveBoardId] = useState<string | null>(null);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
 
@@ -621,6 +624,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
                 </div>
 
+
+                {/* 4. Notes sub-menu */}
+                <div className="pt-2">
+                  <button
+                    onClick={() => setCurrentView('notes')}
+                    className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${currentView === 'notes' ? 'bg-purple-500/10 text-purple-300 border border-purple-500/15' : 'text-neutral-400 hover:text-white hover:bg-white/[0.02]'}`}
+                  >
+                    <FileText className="h-4 w-4" />
+                    <span className="flex-grow text-left">Notes</span>
+                  </button>
+                </div>
+
               </nav>
             </motion.div>
           )}
@@ -927,6 +942,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   </form>
 
                 </div>
+              )}
+
+              {/* ========================================== */}
+              {/* IF 'notes' VIEW                            */}
+              {/* ========================================== */}
+              {currentView === 'notes' && (
+                <Notes />
               )}
 
             </motion.div>

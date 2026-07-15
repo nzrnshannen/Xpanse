@@ -1,6 +1,6 @@
 from typing import List, Optional
 from sqlmodel import SQLModel, Field, Relationship
-from app.models.bridges import SpaceMemberLink, BoardMemberLink, RoomMemberLink
+from app.models.bridges import SpaceMemberLink, BoardMemberLink, RoomMemberLink, NoteCollaboratorLink
 
 class User(SQLModel, table=True):
     """
@@ -21,7 +21,7 @@ class User(SQLModel, table=True):
     spaces: List["Space"] = Relationship(back_populates="members", link_model=SpaceMemberLink)
     boards: List["Board"] = Relationship(back_populates="members", link_model=BoardMemberLink)
     rooms: List["Room"] = Relationship(back_populates="members", link_model=RoomMemberLink)
-
+    notes: List["Note"] = Relationship(back_populates="collaborators", link_model=NoteCollaboratorLink)
 
 class Space(SQLModel, table=True):
     """
@@ -43,6 +43,10 @@ class Space(SQLModel, table=True):
     )
     rooms: List["Room"] = Relationship(
         back_populates="space", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    notes: List["Note"] = Relationship(
+        back_populates="space",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
 
@@ -76,3 +80,20 @@ class Room(SQLModel, table=True):
     # Relational Links
     space: Space = Relationship(back_populates="rooms")
     members: List[User] = Relationship(back_populates="rooms", link_model=RoomMemberLink)
+
+class Note(SQLModel, table=True):
+    """
+    Note represents collaborative text documents inside a space.
+    """
+    __tablename__ = "notes"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    space_id: int = Field(foreign_key="spaces.id", ondelete="CASCADE")
+    owner_id: int = Field(foreign_key="users.id", ondelete="CASCADE")
+    title: str
+    content: str = Field(default="")
+
+    # Relational Links
+    space: Space = Relationship(back_populates="notes")
+    owner: User = Relationship()
+    collaborators: List[User] = Relationship(back_populates="notes", link_model=NoteCollaboratorLink)

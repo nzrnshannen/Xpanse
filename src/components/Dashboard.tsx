@@ -68,6 +68,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [hasSpaces, setHasSpaces] = useState(false);
   const [spaces, setSpaces] = useState<MockSpace[]>([]);
   const [activeSpaceId, setActiveSpaceId] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Main Active Area view state
   const [currentView, setCurrentView] = useState<'home' | 'boards_list' | 'kanban' | 'chats'>('home');
@@ -370,14 +371,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         {/* Spaces list container */}
         <div className="flex flex-col gap-4 items-center w-full">
           {/* Logo Brand */}
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
-            E
+          <div className="h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-purple-500/20 border border-white/[0.05]">
+            <img src="/logo.png" alt="Expanse Logo" className="w-full h-full object-cover" />
           </div>
 
           <div className="h-px bg-white/[0.05] w-8" />
 
           {/* Quick Space Selector Avatars */}
-          <div className="flex flex-col gap-2 w-full items-center max-h-[320px] overflow-y-auto pr-0.5">
+          <div className="flex flex-col gap-2 w-full items-center max-h-[320px] overflow-y-auto overflow-x-hidden pr-0.5">
             {spaces.map(space => (
               <button
                 key={space.id}
@@ -415,6 +416,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
         {/* Profile Avatar & Logout */}
         <div className="flex flex-col gap-4 items-center w-full">
+          {/* Sidebar Toggle */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-transparent text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+            title={isSidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+          >
+            {isSidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+          
           <button
             onClick={() => setActiveActionModal('join_space')}
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.05] bg-white/[0.02] text-neutral-400 hover:text-white transition-colors cursor-pointer"
@@ -446,8 +456,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       {/* ========================================================================= */}
       {/* PANE 2: Internal Navigation Sidebar (240px width)                          */}
       {/* ========================================================================= */}
-      <aside className="w-60 border-r border-white/[0.05] bg-[#070709] flex flex-col justify-between flex-shrink-0 z-10">
-        <AnimatePresence mode="wait">
+      <aside 
+        className={`border-r border-white/[0.05] bg-[#070709] flex flex-col justify-between flex-shrink-0 z-10 transition-all duration-300 ease-in-out relative ${isSidebarOpen ? 'w-60 opacity-100' : 'w-0 opacity-0 border-none'}`}
+      >
+        <div className="w-60 flex flex-col h-full overflow-hidden">
+          <AnimatePresence mode="wait">
           {!hasSpaces ? (
             
             /* No Spaces Empty State menu */
@@ -612,6 +625,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </aside>
 
       {/* ========================================================================= */}

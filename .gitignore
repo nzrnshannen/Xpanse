@@ -22,3 +22,25 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Project files & specifications
+Xpanse_Specification.md
+
+# Python virtual environments & dependencies
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Databases
+*.db
+*.sqlite3
+
+# Local environment secrets
+backend/.env
+.env.local
+.env.*.local
+

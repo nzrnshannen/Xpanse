@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, UserPlus, FileText, Share2, Trash2 } from 'lucide-react';
+import { Plus, X, UserPlus, FileText, Share2, Trash2, Bold, Italic, List, ListOrdered, ImageIcon } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Image from '@tiptap/extension-image';
 
 interface Note {
   id: string;
@@ -40,7 +43,7 @@ export const Notes: React.FC = () => {
   const handleCreateNote = () => {
     const newNote = {
       id: Date.now().toString(),
-      title: 'Untitled Note',
+      title: '',
       content: ''
     };
     setNotes([...notes, newNote]);
@@ -139,13 +142,18 @@ export const Notes: React.FC = () => {
                   placeholder="Note Title"
                   className="w-full bg-transparent text-4xl font-bold text-white placeholder-neutral-700 outline-none mb-8"
                 />
-                <textarea
-                  value={activeNote.content}
-                  onChange={(e) => handleUpdateNote('content', e.target.value)}
-                  readOnly={userRole === 'viewer'}
-                  placeholder="Start typing..."
-                  className="w-full h-[60vh] bg-transparent text-lg text-neutral-300 placeholder-neutral-700 outline-none resize-none leading-relaxed"
-                />
+                {/* TipTap Rich Text Editor */}
+                <div className="w-full bg-transparent min-h-[60vh] text-lg text-neutral-300 placeholder-neutral-700 outline-none leading-relaxed prose prose-invert max-w-none">
+                  {userRole !== 'viewer' && activeNote && (
+                    <TiptapEditor 
+                      content={activeNote.content} 
+                      onChange={(html) => handleUpdateNote('content', html)} 
+                    />
+                  )}
+                  {userRole === 'viewer' && activeNote && (
+                    <div dangerouslySetInnerHTML={{ __html: activeNote.content }} className="min-h-[60vh]" />
+                  )}
+                </div>
               </div>
             </div>
           </>
@@ -265,6 +273,104 @@ export const Notes: React.FC = () => {
         )}
       </AnimatePresence>
 
+    </div>
+  );
+};
+
+// ==========================================
+// TIPTAP EDITOR COMPONENT
+// ==========================================
+
+const MenuBar = ({ editor }: { editor: any }) => {
+  if (!editor) return null;
+
+  const addImage = () => {
+    const url = window.prompt('URL of the image:');
+    if (url) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1 mb-6 pb-4 border-b border-white/5">
+      <button
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        disabled={!editor.can().chain().focus().toggleBold().run()}
+        className={`p-1.5 rounded transition-colors ${editor.isActive('bold') ? 'bg-purple-500/20 text-purple-400' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+        title="Bold"
+      >
+        <Bold className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        disabled={!editor.can().chain().focus().toggleItalic().run()}
+        className={`p-1.5 rounded transition-colors ${editor.isActive('italic') ? 'bg-purple-500/20 text-purple-400' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+        title="Italic"
+      >
+        <Italic className="w-4 h-4" />
+      </button>
+      
+      <div className="w-px h-4 bg-white/10 mx-1" />
+
+      <button
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        className={`p-1.5 rounded transition-colors ${editor.isActive('bulletList') ? 'bg-purple-500/20 text-purple-400' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+        title="Bullet List"
+      >
+        <List className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        className={`p-1.5 rounded transition-colors ${editor.isActive('orderedList') ? 'bg-purple-500/20 text-purple-400' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+        title="Ordered List"
+      >
+        <ListOrdered className="w-4 h-4" />
+      </button>
+
+      <div className="w-px h-4 bg-white/10 mx-1" />
+
+      <button
+        onClick={addImage}
+        className="p-1.5 rounded transition-colors text-neutral-400 hover:text-white hover:bg-white/5"
+        title="Insert Image"
+      >
+        <ImageIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
+const TiptapEditor = ({ content, onChange }: { content: string, onChange: (html: string) => void }) => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+    ],
+    content: content || '<p></p>',
+    onUpdate: ({ editor }) => {
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-invert prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 focus:outline-none max-w-none',
+      },
+    },
+  });
+
+  // Keep editor content in sync with external changes (like switching notes)
+  React.useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || '<p></p>');
+    }
+  }, [content, editor]);
+
+  return (
+    <div>
+      <MenuBar editor={editor} />
+      <EditorContent editor={editor} />
     </div>
   );
 };

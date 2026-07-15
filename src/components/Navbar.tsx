@@ -19,7 +19,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLoginClick, onSignupClick }) =
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-white/[0.05] bg-black/40 backdrop-blur-md transition-all duration-300">
-      <div className="mx-auto flex max-w-7xl h-16 items-center justify-between px-6 sm:px-8">
+      <div className="relative mx-auto flex max-w-7xl h-16 items-center justify-between px-6 sm:px-8">
         {/* Left Side: Logo */}
         <a href="#" className="flex items-center gap-2.5 group">
           <div className="flex items-center justify-center w-8 h-8">
@@ -28,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLoginClick, onSignupClick }) =
         </a>
 
         {/* Center: Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
             <a
               key={link.name}

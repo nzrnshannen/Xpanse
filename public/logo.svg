@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="xe-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" /> <!-- tailwind purple-500 -->
+      <stop offset="100%" stop-color="#4F46E5" /> <!-- tailwind indigo-600 -->
+    </linearGradient>
+  </defs>
+  <!-- Transparent background, just the letters XE -->
+  <text 
+    x="50%" 
+    y="55%" 
+    text-anchor="middle" 
+    dominant-baseline="middle" 
+    font-family="'Outfit', system-ui, sans-serif" 
+    font-weight="900" 
+    font-size="110" 
+    fill="url(#xe-gradient)" 
+    letter-spacing="-4">
+    XE
+  </text>
+</svg>

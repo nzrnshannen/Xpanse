@@ -15,7 +15,6 @@ html, body {
   background-color: #050505;
   color: #f4f4f5;
   scroll-behavior: smooth;
-  overflow-x: hidden;
   margin: 0;
   padding: 0;
 }
@@ -31,6 +30,7 @@ html, body {
   display: block;
   text-align: left;
   box-sizing: border-box;
+  overflow-x: clip; /* clip is better for sticky descendants */
 }
 
 /* Custom styles for glowing backgrounds and visual polish */

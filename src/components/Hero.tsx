@@ -9,7 +9,7 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ onGetStartedClick, onJoinInviteClick }) => {
   return (
-    <section className="relative overflow-hidden pt-20 pb-16 md:pt-32 md:pb-24">
+    <section className="relative overflow-hidden pt-12 pb-16 md:pt-16 md:pb-24">
       {/* Decorative Grid & Glow Mesh backgrounds */}
       <div className="grid-bg" />
       <div className="glow-mesh" />

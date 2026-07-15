@@ -371,8 +371,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         {/* Spaces list container */}
         <div className="flex flex-col gap-4 items-center w-full">
           {/* Logo Brand */}
-          <div className="h-10 w-10 rounded-xl overflow-hidden shadow-lg shadow-purple-500/20 border border-white/[0.05]">
-            <img src="/logo.png" alt="Expanse Logo" className="w-full h-full object-cover" />
+          <div className="flex items-center justify-center w-10 h-10 mt-1">
+            <img src="/logo.svg" alt="XE Logo" className="w-full h-full drop-shadow-md" />
           </div>
 
           <div className="h-px bg-white/[0.05] w-8" />

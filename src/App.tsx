@@ -72,10 +72,9 @@ const App: React.FC = () => {
       <footer className="border-t border-white/[0.05] bg-black py-12 text-xs text-neutral-500">
         <div className="mx-auto max-w-7xl px-6 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              <Compass className="h-3.5 w-3.5" />
+            <div className="flex items-center justify-center w-6 h-6">
+              <img src="/logo.svg" alt="XE Logo" className="w-full h-full drop-shadow-sm" />
             </div>
-            <span className="font-display font-bold text-white tracking-tight text-sm">Xpanse</span>
           </div>
           
           <div className="flex items-center gap-8">

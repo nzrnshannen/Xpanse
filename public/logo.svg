@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 40 120 120">
+  <defs>
+    <linearGradient id="xe-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" /> <!-- tailwind purple-500 -->
+      <stop offset="100%" stop-color="#4F46E5" /> <!-- tailwind indigo-600 -->
+    </linearGradient>
+  </defs>
+  
+  <g fill="url(#xe-gradient)">
+    <!-- X -->
+    <path d="M 47.5 60 H 65.5 L 72.5 77.5 L 79.5 60 H 97.5 L 81.5 100 L 97.5 140 H 79.5 L 72.5 122.5 L 65.5 140 H 47.5 L 63.5 100 Z" />
+    
+    <!-- E -->
+    <path d="M 112.5 60 H 152.5 V 76 H 128.5 V 92 H 144.5 V 108 H 128.5 V 124 H 152.5 V 140 H 112.5 Z" />
+  </g>
+</svg>

@@ -26,8 +26,12 @@ interface TaskModalProps {
 
 export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onDelete }) => {
   const [editedTask, setEditedTask] = useState<Task>(task);
+  const [savedTask, setSavedTask] = useState<Task>(task);
   const [isPreview, setIsPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'preview' | 'close' | null>(null);
+  
+  const hasUnsavedChanges = JSON.stringify(editedTask) !== JSON.stringify(savedTask);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Focus textarea when switching to edit mode
@@ -37,10 +41,22 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
     }
   }, [isPreview]);
 
-  // Save changes on close
+  // Check for unsaved changes before closing
   const handleClose = () => {
+    if (hasUnsavedChanges) {
+      setConfirmAction('close');
+    } else {
+      onClose();
+    }
+  };
+
+  const handleSave = () => {
     onSave(editedTask);
-    onClose();
+    setSavedTask(editedTask);
+  };
+
+  const handleDiscard = () => {
+    setEditedTask(savedTask);
   };
 
   // Handle Markdown Checklist toggles in Preview mode
@@ -190,6 +206,66 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="relative w-full max-w-4xl max-h-[85vh] bg-[#0c0c0e] border border-white/[0.08] rounded-2xl shadow-2xl flex flex-col overflow-hidden m-4"
         >
+          {/* Unsaved Changes Confirmation Modal Overlay */}
+          <AnimatePresence>
+            {confirmAction && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+              >
+                <motion.div 
+                  initial={{ scale: 0.95 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0.95 }}
+                  className="bg-neutral-900 border border-white/[0.08] p-6 rounded-xl shadow-2xl max-w-sm w-full text-center m-4"
+                >
+                  <h3 className="text-sm font-bold text-white mb-2">Unsaved Changes</h3>
+                  <p className="text-xs text-neutral-400 mb-6">
+                    You have unsaved changes. Do you want to save or discard them?
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <button 
+                      onClick={() => {
+                        handleSave();
+                        if (confirmAction === 'preview') {
+                          setIsPreview(true);
+                          setConfirmAction(null);
+                        } else {
+                          onClose();
+                        }
+                      }}
+                      className="w-full py-2 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/20 rounded-lg text-xs font-bold transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                    <button 
+                      onClick={() => {
+                        handleDiscard();
+                        if (confirmAction === 'preview') {
+                          setIsPreview(true);
+                          setConfirmAction(null);
+                        } else {
+                          onClose();
+                        }
+                      }}
+                      className="w-full py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-bold transition-colors"
+                    >
+                      Discard Changes
+                    </button>
+                    <button 
+                      onClick={() => setConfirmAction(null)}
+                      className="w-full py-2 bg-transparent text-neutral-400 hover:text-white rounded-lg text-xs font-bold transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Header */}
           <div className="flex items-start justify-between p-6 border-b border-white/[0.05]">
             <div className="flex-1 mr-8">
@@ -244,7 +320,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
                     <Edit3 className="w-3.5 h-3.5" /> Edit
                   </button>
                   <button 
-                    onClick={() => setIsPreview(true)}
+                    onClick={() => {
+                      if (!isPreview && hasUnsavedChanges) {
+                        setConfirmAction('preview');
+                      } else {
+                        setIsPreview(true);
+                      }
+                    }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${isPreview ? 'bg-white/[0.08] text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
                   >
                     <Eye className="w-3.5 h-3.5" /> Preview
@@ -270,6 +352,23 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
                     className="flex-1 w-full bg-transparent p-4 text-sm text-neutral-200 focus:outline-none resize-none placeholder-neutral-600 custom-scrollbar leading-relaxed"
                     placeholder="Add a detailed description..."
                   />
+                  {/* Save/Discard Actions in Edit Mode */}
+                  {hasUnsavedChanges && (
+                    <div className="flex items-center justify-end gap-2 p-3 bg-black/40 border-t border-white/[0.05]">
+                      <button 
+                        onClick={handleDiscard} 
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-colors"
+                      >
+                        Discard
+                      </button>
+                      <button 
+                        onClick={handleSave} 
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 border border-purple-500/20 transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex-1 p-4 bg-black/20 rounded-xl border border-white/[0.05] overflow-y-auto custom-scrollbar">

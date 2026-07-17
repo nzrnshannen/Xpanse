@@ -66,6 +66,7 @@ interface MockChannel {
   id: string;
   name: string;
   isAI?: boolean;
+  createdBy?: string;
   messages: Message[];
 }
 
@@ -98,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   // Modal control states
-  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | null>(null);
+  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | null>(null);
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -301,6 +302,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     const newChan: MockChannel = {
       id: `c-${Date.now()}`,
       name: cleanName,
+      createdBy: userEmail,
       messages: [{ sender: 'System', text: `Welcome to the #${cleanName} chat channel.`, time: 'Just now' }]
     };
 
@@ -312,6 +314,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     }));
 
     setNewChatName('');
+    setActiveActionModal(null);
+  };
+
+  // 4b. Action Handler: Delete Group Chat
+  const handleDeleteChannel = () => {
+    if (!activeSpaceId || !activeChannelId) return;
+
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          channels: s.channels.filter(c => c.id !== activeChannelId)
+        };
+      }
+      return s;
+    }));
+
+    // Find general or AI channel to switch to
+    const defaultChan = activeSpace?.channels.find(c => c.id !== activeChannelId);
+    if (defaultChan) {
+      setActiveChannelId(defaultChan.id);
+    } else {
+      setActiveChannelId(null);
+      setCurrentView('home');
+    }
     setActiveActionModal(null);
   };
 
@@ -1374,6 +1401,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                       )}
                       <span>{activeChannel.name}</span>
                     </div>
+                    {activeChannel.createdBy === userEmail && (
+                      <button 
+                        onClick={() => setActiveActionModal('delete_chat')}
+                        className="p-2 hover:bg-red-500/10 rounded-lg text-neutral-500 hover:text-red-400 transition-colors"
+                        title="Delete Chat"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </header>
 
                   {/* Messages container */}
@@ -1682,6 +1718,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                       </button>
                     </div>
                   </form>
+                </div>
+              )}
+
+              {/* Delete Group Chat Dialog */}
+              {activeActionModal === 'delete_chat' && (
+                <div>
+                  <h3 className="text-sm font-bold text-white mb-1.5">Delete Group Chat</h3>
+                  <p className="text-[11px] text-neutral-400 mb-4">Are you sure you want to delete <span className="font-bold text-white">#{activeChannel?.name}</span>? This action cannot be undone and all messages will be lost.</p>
+                  <div className="flex gap-2 justify-end text-[11px] font-semibold mt-4">
+                    <button 
+                      type="button" 
+                      onClick={() => setActiveActionModal(null)}
+                      className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={handleDeleteChannel}
+                      className="px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                    >
+                      Yes, delete it
+                    </button>
+                  </div>
                 </div>
               )}
 

@@ -19,7 +19,8 @@ import {
   Trash2,
   Edit2,
   GripVertical,
-  X
+  X,
+  CheckCircle2
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -119,6 +120,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   // Draft Task State
   const [draftTask, setDraftTask] = useState<Task | null>(null);
+
+  // Success Modal State
+  const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
 
   const activeSpace = spaces.find(s => s.id === activeSpaceId);
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
@@ -612,6 +616,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         return s;
       }));
       setDraftTask(null);
+      setShowTaskSuccessModal(true);
       return;
     }
 
@@ -1697,6 +1702,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
           onDelete={draftTask ? () => setDraftTask(null) : handleDeleteTask}
         />
       )}
+
+      {/* Task Success Modal */}
+      <AnimatePresence>
+        {showTaskSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowTaskSuccessModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Task Created!</h3>
+              <p className="text-sm text-neutral-400 mb-6">Your new task has been successfully added to the board.</p>
+              <button 
+                onClick={() => setShowTaskSuccessModal(false)}
+                className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Undo Toast */}
       <AnimatePresence>

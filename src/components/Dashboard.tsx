@@ -124,6 +124,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   // Success Modal State
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
+  const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
 
   const activeSpace = spaces.find(s => s.id === activeSpaceId);
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
@@ -340,6 +341,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       setCurrentView('home');
     }
     setActiveActionModal(null);
+    setShowChatDeleteSuccessModal(true);
   };
 
   // 5. Action Handler: Send Message
@@ -1725,7 +1727,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               {activeActionModal === 'delete_chat' && (
                 <div>
                   <h3 className="text-sm font-bold text-white mb-1.5">Delete Group Chat</h3>
-                  <p className="text-[11px] text-neutral-400 mb-4">Are you sure you want to delete <span className="font-bold text-white">#{activeChannel?.name}</span>? This action cannot be undone and all messages will be lost.</p>
+                  <p className="text-[11px] text-neutral-400 mb-4">
+                    Are you sure you want to delete <span className="font-bold text-white">#{activeChannel?.name}</span>? 
+                    This action cannot be undone and all messages will be lost. This group chat will be permanently deleted.
+                  </p>
                   <div className="flex gap-2 justify-end text-[11px] font-semibold mt-4">
                     <button 
                       type="button" 
@@ -1785,6 +1790,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               <p className="text-sm text-neutral-400 mb-6">Your new task has been successfully added to the board.</p>
               <button 
                 onClick={() => setShowTaskSuccessModal(false)}
+                className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Chat Delete Success Modal */}
+      <AnimatePresence>
+        {showChatDeleteSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowChatDeleteSuccessModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Group Chat Deleted!</h3>
+              <p className="text-sm text-neutral-400 mb-6">The group chat has been successfully and permanently deleted.</p>
+              <button 
+                onClick={() => setShowChatDeleteSuccessModal(false)}
                 className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
               >
                 Awesome

@@ -30,6 +30,28 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
   const [isPreview, setIsPreview] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'preview' | 'close' | null>(null);
+
+  const [showLabelDropdown, setShowLabelDropdown] = useState(false);
+  const [customLabelName, setCustomLabelName] = useState('');
+  const [customLabelColor, setCustomLabelColor] = useState('#FFFFFF');
+
+  const PRESET_LABELS = [
+    { name: 'Dev', color: '#A855F7' },
+    { name: 'Backend', color: '#3B82F6' },
+    { name: 'Design', color: '#EC4899' },
+    { name: 'QA', color: '#EAB308' },
+    { name: 'Urgent', color: '#EF4444' },
+  ];
+  
+  const handleAddLabel = (name: string, color: string, is_custom: boolean = false) => {
+    const newLabel = { name, color, is_custom };
+    const currentLabels = editedTask.labels || [];
+    if (!currentLabels.find(l => l.name === name)) {
+      setEditedTask({ ...editedTask, labels: [...currentLabels, newLabel] });
+    }
+    setShowLabelDropdown(false);
+    setCustomLabelName('');
+  };
   
   const hasUnsavedChanges = JSON.stringify(editedTask) !== JSON.stringify(savedTask);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -392,17 +414,78 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
                 />
               </div>
 
-              <div>
+              {/* Labels */}
+              <div className="relative">
                 <h4 className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <Tag className="w-3.5 h-3.5" /> Label
+                  <Tag className="w-3.5 h-3.5" /> Labels
                 </h4>
-                <input 
-                  type="text"
-                  value={editedTask.label || ''}
-                  onChange={e => setEditedTask({ ...editedTask, label: e.target.value })}
-                  placeholder="e.g. Backend, Bug"
-                  className="w-full bg-neutral-900 border border-white/[0.05] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
-                />
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {(editedTask.labels || []).map((lbl, idx) => (
+                    <span 
+                      key={idx} 
+                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: `${lbl.color}20`, color: lbl.color, border: `1px solid ${lbl.color}40` }}
+                      onClick={() => {
+                        const newLabels = (editedTask.labels || []).filter((_, i) => i !== idx);
+                        setEditedTask({ ...editedTask, labels: newLabels });
+                      }}
+                    >
+                      {lbl.name} <X className="w-3 h-3" />
+                    </span>
+                  ))}
+                  <button 
+                    onClick={() => setShowLabelDropdown(!showLabelDropdown)}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-white/[0.05] text-neutral-400 hover:bg-white/[0.1] hover:text-white transition-colors border border-dashed border-white/[0.2]"
+                  >
+                    + Add
+                  </button>
+                </div>
+                
+                {showLabelDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-full bg-neutral-900 border border-white/[0.1] rounded-lg shadow-xl z-10 overflow-hidden flex flex-col">
+                    <div className="p-2 flex flex-col gap-1 max-h-48 overflow-y-auto custom-scrollbar">
+                      {PRESET_LABELS.map(preset => (
+                        <button
+                          key={preset.name}
+                          onClick={() => handleAddLabel(preset.name, preset.color, false)}
+                          className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/[0.05] transition-colors text-left"
+                        >
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: preset.color }} />
+                          <span className="text-xs text-neutral-200 font-medium">{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="border-t border-white/[0.1] p-2 bg-black/20">
+                      <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider px-2 mb-1 block">Others</span>
+                      <div className="flex flex-col gap-2 mt-2 px-1">
+                        <input
+                          type="text"
+                          value={customLabelName}
+                          onChange={e => setCustomLabelName(e.target.value)}
+                          placeholder="+ Add Custom Label"
+                          className="w-full bg-neutral-950 border border-white/[0.1] rounded text-xs px-2 py-1.5 text-white focus:outline-none focus:border-purple-500/50"
+                        />
+                        {customLabelName && (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={customLabelColor}
+                              onChange={e => setCustomLabelColor(e.target.value)}
+                              className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0"
+                            />
+                            <button
+                              onClick={() => handleAddLabel(customLabelName, customLabelColor, true)}
+                              className="flex-1 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded text-[10px] font-bold py-1 transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

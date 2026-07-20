@@ -49,6 +49,7 @@ export interface Task {
   assignee?: string;
   labels?: { name: string; color: string; is_custom?: boolean }[];
   due_date?: string;
+  created_at?: string;
 }
 
 interface MockBoard {
@@ -181,9 +182,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             { id: 'c3', name: 'Done', position: 2 }
           ],
           tasks: [
-            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0, labels: [{ name: 'Dev', color: '#A855F7' }] },
-            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0, labels: [{ name: 'Backend', color: '#3B82F6' }] },
-            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0, labels: [{ name: 'Design', color: '#EC4899' }] }
+            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0, labels: [{ name: 'Dev', color: '#A855F7' }], created_at: new Date(Date.now() - 86400000 * 2).toISOString() },
+            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0, labels: [{ name: 'Backend', color: '#3B82F6' }], created_at: new Date(Date.now() - 86400000).toISOString() },
+            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0, labels: [{ name: 'Design', color: '#EC4899' }], created_at: new Date().toISOString() }
           ]
         },
         {
@@ -1491,7 +1492,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                               <p className="text-xs font-medium text-neutral-200 leading-tight">{task.title}</p>
                               
                               {/* Card Footer: Metadata Indicators */}
-                              {(task.description || task.due_date || task.assignee) && (
+                              {(task.description || task.due_date || task.assignee || task.created_at) && (
                                 <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center gap-3 text-[10px] text-neutral-500 font-medium">
                                   {task.description && (
                                     <div className="flex items-center gap-1" title="Has description">
@@ -1502,6 +1503,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                                     <div className="flex items-center gap-1" title={`Due: ${task.due_date}`}>
                                       <Calendar className="w-3 h-3" />
                                       <span>{new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                  )}
+                                  {task.created_at && (
+                                    <div className="flex items-center gap-1" title={`Created: ${new Date(task.created_at).toLocaleDateString()}`}>
+                                      <span>Created: {new Date(task.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                     </div>
                                   )}
                                   {task.assignee && (

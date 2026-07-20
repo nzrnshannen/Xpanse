@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -20,7 +20,9 @@ import {
   Edit2,
   GripVertical,
   X,
-  CheckCircle2
+  CheckCircle2,
+  Filter,
+  CheckSquare
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -130,6 +132,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
   const activeChannel = activeSpace?.channels.find(c => c.id === activeChannelId);
   const activeTask = activeBoard?.tasks.find(t => t.id === activeTaskId);
+
+  // Filter state
+  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+
+  // Compute available labels from active tasks
+  const availableLabels = useMemo(() => {
+    if (!activeBoard) return { labels: [], hasTasksWithoutLabels: false, totalTasks: 0 };
+    
+    const labelMap = new Map<string, { name: string, color: string }>();
+    let hasTasksWithoutLabels = false;
+
+    activeBoard.tasks.forEach(task => {
+      if (task.labels && task.labels.length > 0) {
+        task.labels.forEach(lbl => {
+          if (!labelMap.has(lbl.name)) {
+            labelMap.set(lbl.name, lbl);
+          }
+        });
+      } else {
+        hasTasksWithoutLabels = true;
+      }
+    });
+
+    return {
+      labels: Array.from(labelMap.values()),
+      hasTasksWithoutLabels,
+      totalTasks: activeBoard.tasks.length
+    };
+  }, [activeBoard]);
 
   // 1. Action Handler: Create Space
   const handleCreateSpace = (e: React.FormEvent) => {
@@ -1225,6 +1257,100 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                       <span className="text-[10px] text-neutral-500 font-medium hidden sm:inline-block">
                         💡 Drag columns or tasks to move them
                       </span>
+
+                      {/* Filter Dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors ${selectedLabels.length > 0 ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : 'bg-neutral-900 border-white/[0.1] text-neutral-400 hover:bg-neutral-800 hover:text-white'}`}
+                        >
+                          <Filter className="w-3.5 h-3.5" />
+                          Filter
+                          {selectedLabels.length > 0 && (
+                            <span className="bg-purple-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center">
+                              {selectedLabels.length}
+                            </span>
+                          )}
+                        </button>
+
+                        {showFilterDropdown && (
+                          <div className="absolute right-0 top-full mt-2 w-56 bg-neutral-900 border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                            <div className="p-3 border-b border-white/[0.05]">
+                              <h4 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Filter by Label</h4>
+                            </div>
+                            
+                            <div className="p-2 max-h-64 overflow-y-auto custom-scrollbar flex flex-col gap-1">
+                              {availableLabels.totalTasks === 0 || (availableLabels.labels.length === 0 && !availableLabels.hasTasksWithoutLabels) ? (
+                                <div className="px-2 py-3 text-xs text-neutral-500 italic text-center">
+                                  No labels currently on the tasks
+                                </div>
+                              ) : (
+                                <>
+                                  {availableLabels.labels.map(lbl => {
+                                    const isSelected = selectedLabels.includes(lbl.name);
+                                    return (
+                                      <label key={lbl.name} className="flex items-center gap-3 px-2 py-1.5 hover:bg-white/[0.05] rounded-lg cursor-pointer transition-colors group">
+                                        <input 
+                                          type="checkbox" 
+                                          className="hidden"
+                                          checked={isSelected}
+                                          onChange={() => {
+                                            if (isSelected) {
+                                              setSelectedLabels(prev => prev.filter(l => l !== lbl.name));
+                                            } else {
+                                              setSelectedLabels(prev => [...prev, lbl.name]);
+                                            }
+                                          }}
+                                        />
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-purple-500 border-purple-500' : 'border-white/[0.2] group-hover:border-white/[0.4]'}`}>
+                                          {isSelected && <CheckSquare className="w-3 h-3 text-white" />}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: lbl.color }} />
+                                          <span className="text-xs text-neutral-200 font-medium">{lbl.name}</span>
+                                        </div>
+                                      </label>
+                                    );
+                                  })}
+                                  
+                                  {availableLabels.hasTasksWithoutLabels && (
+                                    <label className="flex items-center gap-3 px-2 py-1.5 hover:bg-white/[0.05] rounded-lg cursor-pointer transition-colors group mt-1 border-t border-white/[0.05] pt-2">
+                                      <input 
+                                        type="checkbox" 
+                                        className="hidden"
+                                        checked={selectedLabels.includes('__NO_LABELS__')}
+                                        onChange={() => {
+                                          if (selectedLabels.includes('__NO_LABELS__')) {
+                                            setSelectedLabels(prev => prev.filter(l => l !== '__NO_LABELS__'));
+                                          } else {
+                                            setSelectedLabels(prev => [...prev, '__NO_LABELS__']);
+                                          }
+                                        }}
+                                      />
+                                      <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedLabels.includes('__NO_LABELS__') ? 'bg-purple-500 border-purple-500' : 'border-white/[0.2] group-hover:border-white/[0.4]'}`}>
+                                        {selectedLabels.includes('__NO_LABELS__') && <CheckSquare className="w-3 h-3 text-white" />}
+                                      </div>
+                                      <span className="text-xs text-neutral-400 font-medium italic">No Labels</span>
+                                    </label>
+                                  )}
+                                </>
+                              )}
+                            </div>
+
+                            {selectedLabels.length > 0 && (
+                              <div className="p-2 border-t border-white/[0.05] bg-black/20">
+                                <button
+                                  onClick={() => setSelectedLabels([])}
+                                  className="w-full py-1.5 text-[10px] font-bold text-neutral-400 hover:text-white hover:bg-white/[0.05] rounded-md transition-colors cursor-pointer"
+                                >
+                                  Clear Filters
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       <button 
                         onClick={() => {
                           setNewColumnName('');
@@ -1303,7 +1429,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                         </div>
 
                         <div className="flex flex-col gap-2 flex-grow overflow-y-auto max-h-[500px] pr-0.5">
-                          {activeBoard.tasks.filter(t => t.column_id === column.id).sort((a,b) => a.position - b.position).map(task => (
+                          {activeBoard.tasks
+                            .filter(t => {
+                              if (t.column_id !== column.id) return false;
+                              if (selectedLabels.length === 0) return true;
+                              if (selectedLabels.includes('__NO_LABELS__')) {
+                                if (!t.labels || t.labels.length === 0) return true;
+                              }
+                              if (t.labels && t.labels.length > 0) {
+                                return t.labels.some(l => selectedLabels.includes(l.name));
+                              }
+                              return false;
+                            })
+                            .sort((a,b) => a.position - b.position)
+                            .map(task => (
                             <div
                               key={task.id}
                               draggable

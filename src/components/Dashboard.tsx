@@ -1474,7 +1474,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                               className="p-3.5 rounded-lg bg-neutral-900 border border-white/[0.06] hover:border-purple-500/40 hover:bg-neutral-800 transition-all cursor-grab active:cursor-grabbing group/card relative flex flex-col gap-2"
                             >
                               <div className="flex items-start justify-between">
-                                {task.labels && task.labels.length > 0 ? (
+                                {task.labels && task.labels.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
                                     {task.labels.map((lbl, i) => (
                                       <span 
@@ -1486,10 +1486,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                                       </span>
                                     ))}
                                   </div>
-                                ) : (
-                                  <span className="inline-block text-[9px] font-bold text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
-                                    {task.category}
-                                  </span>
                                 )}
                               </div>
                               <p className="text-xs font-medium text-neutral-200 leading-tight">{task.title}</p>

@@ -1,5 +1,6 @@
 from typing import List, Optional
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Column, JSON
 from app.models.bridges import SpaceMemberLink, BoardMemberLink, RoomMemberLink, NoteCollaboratorLink
 
 class User(SQLModel, table=True):
@@ -99,6 +100,7 @@ class Task(SQLModel, table=True):
     description: Optional[str] = None
     position: int = Field(default=0)
     category: Optional[str] = Field(default="Task")
+    labels: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
 
     # Relational Links
     column: BoardColumn = Relationship(back_populates="tasks")

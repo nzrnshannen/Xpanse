@@ -6,7 +6,7 @@ import {
   Italic, 
   List, 
   ListOrdered, 
-  CheckSquare, 
+  CheckSquare,   
   Calendar, 
   Tag, 
   User,

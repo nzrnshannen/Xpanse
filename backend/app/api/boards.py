@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from sqlmodel import Session, select
 from app.core.database import get_session
 from app.models.domain import Board, BoardColumn, Task, Space
@@ -8,6 +8,28 @@ from app.models.domain import Board, BoardColumn, Task, Space
 router = APIRouter(prefix="/boards", tags=["Boards & Tasks"])
 
 # Pydantic Schemas
+
+# Global Preset Labels
+PRESET_LABELS = [
+    {"name": "Dev", "color": "#A855F7"},
+    {"name": "Backend", "color": "#3B82F6"},
+    {"name": "Design", "color": "#EC4899"},
+    {"name": "QA", "color": "#EAB308"},
+    {"name": "Urgent", "color": "#EF4444"},
+]
+
+class TaskLabel(BaseModel):
+    name: str
+    color: str
+    is_custom: bool = False
+    
+    @model_validator(mode='after')
+    def validate_label(self):
+        if not self.is_custom:
+            valid_preset = any(p["name"] == self.name and p["color"] == self.color for p in PRESET_LABELS)
+            if not valid_preset:
+                raise ValueError(f"Label '{self.name}' with color '{self.color}' is not a valid preset. Set is_custom=True for custom labels.")
+        return self
 
 class BoardCreateRequest(BaseModel):
     space_id: int
@@ -28,6 +50,7 @@ class TaskCreateRequest(BaseModel):
     title: str
     description: Optional[str] = None
     category: Optional[str] = "Task"
+    labels: Optional[List[TaskLabel]] = None
 
 class TaskUpdateRequest(BaseModel):
     title: Optional[str] = None
@@ -35,9 +58,14 @@ class TaskUpdateRequest(BaseModel):
     column_id: Optional[int] = None
     position: Optional[int] = None
     category: Optional[str] = None
+    labels: Optional[List[TaskLabel]] = None
 
 
 # Board Endpoints
+
+@router.get("/labels/presets")
+async def get_preset_labels():
+    return PRESET_LABELS
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_board(
@@ -203,7 +231,8 @@ async def create_task(
         title=data.title,
         description=data.description,
         position=next_pos,
-        category=data.category
+        category=data.category,
+        labels=[label.model_dump() for label in data.labels] if data.labels is not None else []
     )
     session.add(new_task)
     session.commit()
@@ -230,6 +259,8 @@ async def update_task(
         task.position = data.position
     if data.category is not None:
         task.category = data.category
+    if data.labels is not None:
+        task.labels = [label.model_dump() for label in data.labels]
         
     session.add(task)
     session.commit()

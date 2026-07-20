@@ -787,6 +787,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       column_id: columnId,
       category: 'Task',
       position: activeBoard?.tasks.filter(t => t.column_id === columnId).length || 0,
+      created_at: new Date().toISOString(),
     };
     setDraftTask(newTask);
   };
@@ -1499,8 +1500,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                             .sort((a,b) => {
                               if (sortBy === 'alpha_az') return a.title.localeCompare(b.title);
                               if (sortBy === 'alpha_za') return b.title.localeCompare(a.title);
-                              if (sortBy === 'date_newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-                              if (sortBy === 'date_oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+                              if (sortBy === 'date_newest') return new Date(b.created_at || Date.now()).getTime() - new Date(a.created_at || Date.now()).getTime();
+                              if (sortBy === 'date_oldest') return new Date(a.created_at || Date.now()).getTime() - new Date(b.created_at || Date.now()).getTime();
                               return a.position - b.position;
                             })
                             .map(task => (

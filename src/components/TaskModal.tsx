@@ -11,7 +11,8 @@ import {
   Tag, 
   User,
   Eye,
-  Edit3
+  Edit3,
+  Clock
 } from 'lucide-react';
 import type { Task } from './Dashboard'; // We'll need to export Task from Dashboard
 
@@ -401,6 +402,20 @@ export const TaskModal: React.FC<TaskModalProps> = ({ task, onClose, onSave, onD
 
             {/* Right Area: Metadata Sidebar */}
             <div className="w-full md:w-72 bg-black/20 p-6 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
+              {task.created_at && (
+                <div>
+                  <h4 className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5" /> Created on
+                  </h4>
+                  <p className="text-xs text-neutral-300 font-medium">
+                    {new Date(task.created_at).toLocaleString(undefined, { 
+                      year: 'numeric', month: 'long', day: 'numeric', 
+                      hour: 'numeric', minute: '2-digit' 
+                    })}
+                  </p>
+                </div>
+              )}
+
               <div>
                 <h4 className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                   <User className="w-3.5 h-3.5" /> Assignee

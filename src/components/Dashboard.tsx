@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -49,6 +49,7 @@ export interface Task {
   assignee?: string;
   labels?: { name: string; color: string; is_custom?: boolean }[];
   due_date?: string;
+  created_at?: string;
 }
 
 interface MockBoard {
@@ -128,6 +129,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
 
+  // Sort State
+  const [sortBy, setSortBy] = useState<'alpha_az' | 'alpha_za' | 'date_newest' | 'date_oldest'>('date_newest');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const activeSpace = spaces.find(s => s.id === activeSpaceId);
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
   const activeChannel = activeSpace?.channels.find(c => c.id === activeChannelId);
@@ -181,9 +197,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             { id: 'c3', name: 'Done', position: 2 }
           ],
           tasks: [
-            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0, labels: [{ name: 'Dev', color: '#A855F7' }] },
-            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0, labels: [{ name: 'Backend', color: '#3B82F6' }] },
-            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0, labels: [{ name: 'Design', color: '#EC4899' }] }
+            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0, labels: [{ name: 'Dev', color: '#A855F7' }], created_at: new Date(Date.now() - 86400000 * 2).toISOString() },
+            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0, labels: [{ name: 'Backend', color: '#3B82F6' }], created_at: new Date(Date.now() - 86400000).toISOString() },
+            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0, labels: [{ name: 'Design', color: '#EC4899' }], created_at: new Date().toISOString() }
           ]
         },
         {
@@ -771,6 +787,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       column_id: columnId,
       category: 'Task',
       position: activeBoard?.tasks.filter(t => t.column_id === columnId).length || 0,
+      created_at: new Date().toISOString(),
     };
     setDraftTask(newTask);
   };
@@ -1258,6 +1275,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                         💡 Drag columns or tasks to move them
                       </span>
 
+                      {/* Sort Dropdown */}
+                      <div className="relative" ref={sortDropdownRef}>
+                        <button
+                          onClick={() => setShowSortDropdown(!showSortDropdown)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors bg-neutral-900 border-white/[0.1] text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                        >
+                          Sort by <span className="font-serif text-[10px] opacity-70">⇅</span>
+                        </button>
+                        {showSortDropdown && (
+                          <div className="absolute right-0 top-full mt-2 w-56 bg-neutral-900 border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                            <div className="p-3 border-b border-white/[0.05]">
+                              <h4 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Sort by</h4>
+                            </div>
+                            <div className="p-2 flex flex-col gap-1">
+                              {[
+                                { id: 'alpha_az', label: 'Alphabetical (A-Z)' },
+                                { id: 'alpha_za', label: 'Alphabetical (Z-A)' },
+                                { id: 'date_newest', label: 'Date Created (Newest)' },
+                                { id: 'date_oldest', label: 'Date Created (Oldest)' },
+                              ].map(option => (
+                                <button
+                                  key={option.id}
+                                  onClick={() => {
+                                    setSortBy(option.id as any);
+                                    setShowSortDropdown(false);
+                                  }}
+                                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${sortBy === option.id ? 'bg-purple-500/20 text-purple-400' : 'text-neutral-300 hover:bg-white/[0.05]'}`}
+                                >
+                                  <div className="w-4 h-4 flex items-center justify-center">
+                                    {sortBy === option.id && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </div>
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Filter Dropdown */}
                       <div className="relative">
                         <button
@@ -1441,7 +1497,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                               }
                               return false;
                             })
-                            .sort((a,b) => a.position - b.position)
+                            .sort((a,b) => {
+                              if (sortBy === 'alpha_az') return a.title.localeCompare(b.title);
+                              if (sortBy === 'alpha_za') return b.title.localeCompare(a.title);
+                              if (sortBy === 'date_newest') return new Date(b.created_at || Date.now()).getTime() - new Date(a.created_at || Date.now()).getTime();
+                              if (sortBy === 'date_oldest') return new Date(a.created_at || Date.now()).getTime() - new Date(b.created_at || Date.now()).getTime();
+                              return a.position - b.position;
+                            })
                             .map(task => (
                             <div
                               key={task.id}
@@ -1491,7 +1553,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                               <p className="text-xs font-medium text-neutral-200 leading-tight">{task.title}</p>
                               
                               {/* Card Footer: Metadata Indicators */}
-                              {(task.description || task.due_date || task.assignee) && (
+                              {(task.description || task.due_date || task.assignee || task.created_at) && (
                                 <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center gap-3 text-[10px] text-neutral-500 font-medium">
                                   {task.description && (
                                     <div className="flex items-center gap-1" title="Has description">
@@ -1502,6 +1564,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                                     <div className="flex items-center gap-1" title={`Due: ${task.due_date}`}>
                                       <Calendar className="w-3 h-3" />
                                       <span>{new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                                    </div>
+                                  )}
+                                  {task.created_at && (
+                                    <div className="flex items-center gap-1" title={`Created: ${new Date(task.created_at).toLocaleDateString()}`}>
+                                      <span>Created: {new Date(task.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                                     </div>
                                   )}
                                   {task.assignee && (

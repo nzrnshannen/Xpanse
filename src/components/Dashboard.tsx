@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -128,6 +128,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   // Success Modal State
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
+
+  // Sort State
+  const [sortBy, setSortBy] = useState<'alpha_az' | 'alpha_za' | 'date_newest' | 'date_oldest'>('date_newest');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const activeSpace = spaces.find(s => s.id === activeSpaceId);
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
@@ -1259,6 +1274,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                         💡 Drag columns or tasks to move them
                       </span>
 
+                      {/* Sort Dropdown */}
+                      <div className="relative" ref={sortDropdownRef}>
+                        <button
+                          onClick={() => setShowSortDropdown(!showSortDropdown)}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-colors bg-neutral-900 border-white/[0.1] text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                        >
+                          Sort by <span className="font-serif text-[10px] opacity-70">⇅</span>
+                        </button>
+                        {showSortDropdown && (
+                          <div className="absolute right-0 top-full mt-2 w-56 bg-neutral-900 border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col">
+                            <div className="p-3 border-b border-white/[0.05]">
+                              <h4 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Sort by</h4>
+                            </div>
+                            <div className="p-2 flex flex-col gap-1">
+                              {[
+                                { id: 'alpha_az', label: 'Alphabetical (A-Z)' },
+                                { id: 'alpha_za', label: 'Alphabetical (Z-A)' },
+                                { id: 'date_newest', label: 'Date Created (Newest)' },
+                                { id: 'date_oldest', label: 'Date Created (Oldest)' },
+                              ].map(option => (
+                                <button
+                                  key={option.id}
+                                  onClick={() => {
+                                    setSortBy(option.id as any);
+                                    setShowSortDropdown(false);
+                                  }}
+                                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${sortBy === option.id ? 'bg-purple-500/20 text-purple-400' : 'text-neutral-300 hover:bg-white/[0.05]'}`}
+                                >
+                                  <div className="w-4 h-4 flex items-center justify-center">
+                                    {sortBy === option.id && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                  </div>
+                                  {option.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Filter Dropdown */}
                       <div className="relative">
                         <button
@@ -1442,7 +1496,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                               }
                               return false;
                             })
-                            .sort((a,b) => a.position - b.position)
+                            .sort((a,b) => {
+                              if (sortBy === 'alpha_az') return a.title.localeCompare(b.title);
+                              if (sortBy === 'alpha_za') return b.title.localeCompare(a.title);
+                              if (sortBy === 'date_newest') return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+                              if (sortBy === 'date_oldest') return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+                              return a.position - b.position;
+                            })
                             .map(task => (
                             <div
                               key={task.id}

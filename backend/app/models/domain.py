@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import List, Optional
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, DateTime, func
 from app.models.bridges import SpaceMemberLink, BoardMemberLink, RoomMemberLink, NoteCollaboratorLink
 
 class User(SQLModel, table=True):
@@ -101,6 +102,10 @@ class Task(SQLModel, table=True):
     position: int = Field(default=0)
     category: Optional[str] = Field(default="Task")
     labels: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
 
     # Relational Links
     column: BoardColumn = Relationship(back_populates="tasks")

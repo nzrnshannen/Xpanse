@@ -1,75 +1,64 @@
-# React + TypeScript + Vite
+# Xpanse
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**One Space. Infinite Ways to Collaborate.**
 
-Currently, two official plugins are available:
+Xpanse is a high-performance, real-time team collaboration ecosystem built utilizing **Python**, **FastAPI**, and **React**. It represents a structural, modern approach to productivity, dissolving the barrier between isolated project management platforms (like Trello) and rapid-fire team communication layers (like Slack) by unifying them into a highly responsive, nested workspace layout.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- **Unified Workspace:** Bring your project boards and team group chats under a single, unified horizon. 
+- **Granular Permissions:** Grant full access to your entire space, or pinpoint permissions down to a single room or board using a secure top-down permission inheritance model.
+- **Real-Time Collaboration:** Powered by WebSockets to maintain thousands of concurrent, lightweight, stateful connections with absolute performance efficiency.
+- **Interactive Kanban Boards:** Manage workflows dynamically with reactive task cards in a standard Kanban view.
+- **Persistent AI Assistant:** An integrated streaming AI chatbot leveraging Retrieval-Augmented Generation (RAG) to safely aggregate and analyze data vectors across your teams.
+- **Team Communication:** Group chat (GC) channels and direct messages integrated directly into your workflow.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+### Frontend
+- **Framework:** React 19 / Vite + TypeScript
+- **Styling:** Tailwind CSS
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+- **Rich Text Editor:** Tiptap
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Backend
+- **Framework:** FastAPI (Python 3.11+)
+- **Real-Time:** FastAPI WebSockets
+- **Database ORM:** SQLModel / SQLAlchemy
+- **Data Storage:** PostgreSQL
+- **Cache & Broker:** Redis
+- **AI Integration:** OpenAI API (Async streaming)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Prerequisites
+- Node.js (v18+)
+- Python (3.11+)
+- PostgreSQL
+- Redis
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Frontend Setup
 
-```
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Backend Setup
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
 
-```
+2. Set up the virtual environment, install dependencies, and configure the `.env` file based on `.env.example`.
+
+## Architecture Overview
+
+Xpanse operates as a decoupled full-stack application. The frontend utilizes React for state preservation, reactive rendering, and persistent canvas management. The backend leverages FastAPI for REST endpoints and a WebSocket router for real-time messaging, Kanban sync, and the streaming AI bot. PostgreSQL handles hierarchical access controls and data storage, while Redis powers Pub/Sub mechanisms to mirror WebSocket messages.

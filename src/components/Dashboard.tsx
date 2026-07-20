@@ -181,9 +181,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             { id: 'c3', name: 'Done', position: 2 }
           ],
           tasks: [
-            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0 },
-            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0 },
-            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0 }
+            { id: 't1', title: 'Plan core workspace routes', column_id: 'c1', category: 'Dev', position: 0, labels: [{ name: 'Dev', color: '#A855F7' }] },
+            { id: 't2', title: 'Write FastAPI WebSocket models', column_id: 'c2', category: 'Backend', position: 0, labels: [{ name: 'Backend', color: '#3B82F6' }] },
+            { id: 't3', title: 'Finalize Tailwind design tokens', column_id: 'c3', category: 'Design', position: 0, labels: [{ name: 'Design', color: '#EC4899' }] }
           ]
         },
         {
@@ -195,7 +195,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             { id: 'c6', name: 'Done', position: 2 }
           ],
           tasks: [
-            { id: 't4', title: 'Set up Google Analytics', column_id: 'c4', category: 'Marketing', position: 0 }
+            { id: 't4', title: 'Set up Google Analytics', column_id: 'c4', category: 'Marketing', position: 0, labels: [{ name: 'Marketing', color: '#F97316' }] }
           ]
         }
       ],
@@ -260,7 +260,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             { id: 'cj3', name: 'Done', position: 2 }
           ],
           tasks: [
-            { id: 'tj1', title: 'Review Tailwind v4 build guidelines', column_id: 'cj1', category: 'Design', position: 0 }
+            { id: 'tj1', title: 'Review Tailwind v4 build guidelines', column_id: 'cj1', category: 'Design', position: 0, labels: [{ name: 'Design', color: '#EC4899' }] }
           ]
         }
       ],

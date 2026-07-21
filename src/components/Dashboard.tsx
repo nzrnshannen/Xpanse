@@ -125,6 +125,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   // Draft Task State
   const [draftTask, setDraftTask] = useState<Task | null>(null);
 
+  // Mention State
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [showMentionPopup, setShowMentionPopup] = useState(false);
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
+  const [mentionTriggerIndex, setMentionTriggerIndex] = useState(-1);
+  const [previewTaskContext, setPreviewTaskContext] = useState<{boardId: string, taskId: string} | null>(null);
+
   // Success Modal State
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
@@ -148,6 +155,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const activeBoard = activeSpace?.boards.find(b => b.id === activeBoardId);
   const activeChannel = activeSpace?.channels.find(c => c.id === activeChannelId);
   const activeTask = activeBoard?.tasks.find(t => t.id === activeTaskId);
+
+  // Get all tasks across all boards in the active space for mentions
+  const spaceTasks = activeSpace ? activeSpace.boards.flatMap(b => b.tasks.map(t => ({...t, board_id: b.id}))) : [];
+  const mentionSuggestions = spaceTasks.filter(t => 
+    mentionQuery === null || 
+    t.title.toLowerCase().includes(mentionQuery.toLowerCase())
+  );
 
   // Filter state
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
@@ -390,6 +404,58 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     }
     setActiveActionModal(null);
     setShowChatDeleteSuccessModal(true);
+  };
+
+  // Mention Handlers
+  const handleChatInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setNewMessage(val);
+    
+    const cursor = e.target.selectionStart || 0;
+    const textBeforeCursor = val.slice(0, cursor);
+    
+    const match = textBeforeCursor.match(/[@#]([\w\s-]*)$/);
+    if (match) {
+      setShowMentionPopup(true);
+      setMentionQuery(match[1]);
+      setMentionTriggerIndex(match.index || 0);
+      setMentionSelectedIndex(0);
+    } else {
+      setShowMentionPopup(false);
+      setMentionQuery(null);
+    }
+  };
+
+  const insertMention = (task: Task & { board_id: string }) => {
+    if (mentionTriggerIndex === -1) return;
+    const prefix = newMessage.slice(0, mentionTriggerIndex);
+    const suffix = newMessage.slice(mentionTriggerIndex + (mentionQuery ? mentionQuery.length : 0) + 1);
+    
+    const tag = `[[task:${task.board_id}:${task.id}:${task.title}]] `;
+    
+    setNewMessage(prefix + tag + suffix);
+    setShowMentionPopup(false);
+    setMentionQuery(null);
+    setMentionTriggerIndex(-1);
+  };
+
+  const handleChatInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showMentionPopup) return;
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setMentionSelectedIndex(prev => Math.min(prev + 1, Math.max(0, mentionSuggestions.length - 1)));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setMentionSelectedIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      if (mentionSuggestions[mentionSelectedIndex]) {
+        e.preventDefault();
+        insertMention(mentionSuggestions[mentionSelectedIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setShowMentionPopup(false);
+    }
   };
 
   // 5. Action Handler: Send Message
@@ -790,6 +856,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       created_at: new Date().toISOString(),
     };
     setDraftTask(newTask);
+  };
+
+  const renderMessageText = (text: string) => {
+    const parts = text.split(/(\[\[task:[^:]+:[^:]+:.*?\]\])/g);
+    return parts.map((part, i) => {
+      const match = part.match(/\[\[task:([^:]+):([^:]+):(.*?)]]/);
+      if (match) {
+        const [, boardId, taskId, taskTitle] = match;
+        return (
+          <button 
+            key={i}
+            onClick={() => {
+              setPreviewTaskContext({ boardId, taskId });
+              setActiveActionModal('task_preview');
+            }}
+            className="inline-flex items-center gap-1.5 mx-1 px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-medium hover:bg-purple-500/30 transition-colors"
+          >
+            <KanbanSquare className="w-3 h-3" />
+            {taskTitle}
+          </button>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
   };
 
   return (
@@ -1649,8 +1739,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                             <span className="font-bold text-neutral-300">{msg.sender}</span>
                             <span className="text-[9px] text-neutral-500">{msg.time}</span>
                           </div>
-                          <p className="mt-1 text-neutral-400 bg-white/[0.02] border border-white/[0.03] p-3 rounded-xl leading-relaxed self-start">
-                            {msg.text}
+                          <p className="mt-1 text-neutral-400 bg-white/[0.02] border border-white/[0.03] p-3 rounded-xl leading-relaxed self-start break-words whitespace-pre-wrap">
+                            {renderMessageText(msg.text)}
                           </p>
                         </div>
                       </div>
@@ -1658,12 +1748,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   </div>
 
                   {/* Input form */}
-                  <form onSubmit={handleSendMessage} className="p-4 border-t border-white/[0.05] bg-[#070709]/30 flex gap-2 flex-shrink-0">
+                  <form onSubmit={handleSendMessage} className="p-4 border-t border-white/[0.05] bg-[#070709]/30 flex gap-2 flex-shrink-0 relative">
+                    
+                    {/* Mention Popup */}
+                    {showMentionPopup && (
+                      <div className="absolute bottom-full left-4 mb-2 w-72 bg-neutral-900 border border-white/[0.1] rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-64">
+                        <div className="p-2 border-b border-white/[0.05]">
+                          <h4 className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider">Mention Task</h4>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-1 flex flex-col gap-0.5">
+                          {mentionSuggestions.length > 0 ? (
+                            mentionSuggestions.map((task, idx) => (
+                              <button
+                                key={task.id}
+                                type="button"
+                                onClick={() => insertMention(task)}
+                                className={`flex flex-col items-start gap-1 px-3 py-2 rounded-lg text-xs transition-colors text-left ${mentionSelectedIndex === idx ? 'bg-purple-500/20 text-white border border-purple-500/30' : 'text-neutral-300 hover:bg-white/[0.05] border border-transparent'}`}
+                              >
+                                <span className="font-bold">{task.title || 'Untitled Task'}</span>
+                                <span className="text-[9px] text-neutral-500">
+                                  {activeSpace?.boards.find(b => b.id === task.board_id)?.name}
+                                </span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="p-3 text-xs text-neutral-500 text-center">No tasks found</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     <input
                       type="text"
                       placeholder={activeChannel.isAI ? "Ask Xpanse AI anything..." : `Message #${activeChannel.name}...`}
                       value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
+                      onChange={handleChatInputChange}
+                      onKeyDown={handleChatInputKeyDown}
                       className="flex-grow bg-neutral-950 border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors"
                     />
                     <button
@@ -1972,6 +2092,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   </div>
                 </div>
               )}
+
+              {/* Task Preview Dialog */}
+              {activeActionModal === 'task_preview' && previewTaskContext && (() => {
+                const previewTask = spaceTasks.find(t => t.id === previewTaskContext.taskId);
+                if (!previewTask) return null;
+                
+                return (
+                  <div>
+                    <h3 className="text-sm font-bold text-white mb-2 line-clamp-1">{previewTask.title || 'Untitled Task'}</h3>
+                    <div className="flex gap-2 flex-wrap mb-4">
+                      {previewTask.labels?.map((label, idx) => (
+                        <div key={idx} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ backgroundColor: `${label.color}20`, color: label.color }}>
+                          {label.name}
+                        </div>
+                      ))}
+                    </div>
+                    {previewTask.description && (
+                      <p className="text-xs text-neutral-400 mb-4 line-clamp-3 leading-relaxed">
+                        {previewTask.description}
+                      </p>
+                    )}
+                    <div className="flex gap-2 justify-end text-[11px] font-semibold mt-4 border-t border-white/[0.05] pt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setActiveActionModal(null);
+                          setPreviewTaskContext(null);
+                        }}
+                        className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
+                      >
+                        Close Preview
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setActiveActionModal(null);
+                          setActiveBoardId(previewTaskContext.boardId);
+                          setActiveTaskId(previewTaskContext.taskId);
+                          setCurrentView('kanban');
+                          setPreviewTaskContext(null);
+                        }}
+                        className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors"
+                      >
+                        Go to Board
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
             </div>
           </motion.div>

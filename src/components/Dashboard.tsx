@@ -130,6 +130,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showMentionPopup, setShowMentionPopup] = useState(false);
   const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0);
   const [mentionTriggerIndex, setMentionTriggerIndex] = useState(-1);
+  const [previewTaskContext, setPreviewTaskContext] = useState<{boardId: string, taskId: string} | null>(null);
 
   // Success Modal State
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
@@ -867,10 +868,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
           <button 
             key={i}
             onClick={() => {
-              setActiveBoardId(boardId);
-              setActiveTaskId(taskId);
-              setCurrentView('kanban');
-              setActiveActionModal('task_details');
+              setPreviewTaskContext({ boardId, taskId });
+              setActiveActionModal('task_preview');
             }}
             className="inline-flex items-center gap-1.5 mx-1 px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-medium hover:bg-purple-500/30 transition-colors"
           >
@@ -2093,6 +2092,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   </div>
                 </div>
               )}
+
+              {/* Task Preview Dialog */}
+              {activeActionModal === 'task_preview' && previewTaskContext && (() => {
+                const previewTask = spaceTasks.find(t => t.id === previewTaskContext.taskId);
+                if (!previewTask) return null;
+                
+                return (
+                  <div>
+                    <h3 className="text-sm font-bold text-white mb-2 line-clamp-1">{previewTask.title || 'Untitled Task'}</h3>
+                    <div className="flex gap-2 flex-wrap mb-4">
+                      {previewTask.labels?.map((label, idx) => (
+                        <div key={idx} className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ backgroundColor: `${label.color}20`, color: label.color }}>
+                          {label.name}
+                        </div>
+                      ))}
+                    </div>
+                    {previewTask.description && (
+                      <p className="text-xs text-neutral-400 mb-4 line-clamp-3 leading-relaxed">
+                        {previewTask.description}
+                      </p>
+                    )}
+                    <div className="flex gap-2 justify-end text-[11px] font-semibold mt-4 border-t border-white/[0.05] pt-4">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setActiveActionModal(null);
+                          setPreviewTaskContext(null);
+                        }}
+                        className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
+                      >
+                        Close Preview
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setActiveActionModal(null);
+                          setActiveBoardId(previewTaskContext.boardId);
+                          setActiveTaskId(previewTaskContext.taskId);
+                          setCurrentView('kanban');
+                          setPreviewTaskContext(null);
+                        }}
+                        className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors"
+                      >
+                        Go to Board
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
             </div>
           </motion.div>

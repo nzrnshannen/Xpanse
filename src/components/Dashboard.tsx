@@ -134,6 +134,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   // Success Modal State
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
+  const [showTaskUpdatedModal, setShowTaskUpdatedModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
 
   // Sort State
@@ -780,6 +781,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       }
       return s;
     }));
+    setShowTaskUpdatedModal(true);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -2185,6 +2187,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                 className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
               >
                 Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Task Updated Modal */}
+      <AnimatePresence>
+        {showTaskUpdatedModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowTaskUpdatedModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-blue-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-blue-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Changes Saved!</h3>
+              <p className="text-sm text-neutral-400 mb-6">Your edits to this task have been successfully saved.</p>
+              <button 
+                onClick={() => setShowTaskUpdatedModal(false)}
+                className="w-full py-2.5 rounded-xl bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Done
               </button>
             </div>
           </motion.div>

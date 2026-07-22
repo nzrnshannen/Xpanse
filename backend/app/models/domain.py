@@ -124,6 +124,10 @@ class Room(SQLModel, table=True):
     # Relational Links
     space: Space = Relationship(back_populates="rooms")
     members: List[User] = Relationship(back_populates="rooms", link_model=RoomMemberLink)
+    meetings: List["Meeting"] = Relationship(
+        back_populates="room",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 class Note(SQLModel, table=True):
     """
@@ -159,3 +163,43 @@ class NoteChapter(SQLModel, table=True):
 
     # Relational Links
     note: Note = Relationship(back_populates="chapters")
+
+class Meeting(SQLModel, table=True):
+    """
+    Meeting represents a video call session within a Room.
+    """
+    __tablename__ = "meetings"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    room_id: int = Field(foreign_key="rooms.id", ondelete="CASCADE")
+    started_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    ended_at: Optional[datetime] = None
+
+    # Relational Links
+    room: Room = Relationship(back_populates="meetings")
+    minutes: Optional["MeetingMinute"] = Relationship(
+        back_populates="meeting",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "uselist": False}
+    )
+
+class MeetingMinute(SQLModel, table=True):
+    """
+    MeetingMinute stores AI-generated MoM for a Meeting.
+    """
+    __tablename__ = "meeting_minutes"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    meeting_id: int = Field(foreign_key="meetings.id", ondelete="CASCADE", unique=True)
+    summary: str
+    decisions: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    action_items: List[dict] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+
+    # Relational Links
+    meeting: Meeting = Relationship(back_populates="minutes")

@@ -22,11 +22,15 @@ import {
   X,
   CheckCircle2,
   Filter,
-  CheckSquare
+  CheckSquare,
+  Video,
+  Calendar
 } from 'lucide-react';
 
 import { Notes } from './Notes';
 import { TaskModal } from './TaskModal';
+import { VideoCallRoom } from './VideoCallRoom';
+import { MeetingMinutesModal } from './MeetingMinutesModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -102,7 +106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   // Modal control states
-  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | null>(null);
+  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | 'task_preview' | null>(null);
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -136,6 +140,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
   const [showTaskUpdatedModal, setShowTaskUpdatedModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
+
+  // Video Call State
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
 
   // Sort State
   type SortOption = 'alpha_az' | 'alpha_za' | 'date_newest' | 'date_oldest';
@@ -730,6 +738,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       }
       return s;
     }));
+  };
+
+  const handleConvertToTask = (title: string, assignee: string) => {
+    if (!activeSpaceId) return;
+    
+    const space = spaces.find(s => s.id === activeSpaceId);
+    if (!space || space.boards.length === 0) return;
+    
+    const targetBoard = space.boards[0];
+    const targetColumnId = targetBoard.columns.length > 0 ? targetBoard.columns[0].id : 'col-1';
+
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      column_id: targetColumnId,
+      title,
+      description: `Assigned to: ${assignee}\n\nConverted from Meeting Minutes.`,
+      labels: [],
+      category: 'Task',
+      position: 0,
+      created_at: new Date().toISOString()
+    };
+
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          boards: s.boards.map(b => {
+            if (b.id === targetBoard.id) {
+              return {
+                ...b,
+                tasks: [...b.tasks, newTask]
+              };
+            }
+            return b;
+          })
+        };
+      }
+      return s;
+    }));
+    
+    setShowTaskSuccessModal(true);
   };
 
   const handleUpdateTask = (updatedTask: Task) => {
@@ -1718,15 +1767,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                       )}
                       <span>{activeChannel.name}</span>
                     </div>
-                    {activeChannel.createdBy === userEmail && (
-                      <button 
-                        onClick={() => setActiveActionModal('delete_chat')}
-                        className="p-2 hover:bg-red-500/10 rounded-lg text-neutral-500 hover:text-red-400 transition-colors"
-                        title="Delete Chat"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {!activeChannel.isAI && (
+                        <button 
+                          onClick={() => setIsVideoCallActive(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg text-xs font-bold transition-colors border border-purple-500/20"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                          Start Video Call
+                        </button>
+                      )}
+                      {activeChannel.createdBy === userEmail && (
+                        <button 
+                          onClick={() => setActiveActionModal('delete_chat')}
+                          className="p-2 hover:bg-red-500/10 rounded-lg text-neutral-500 hover:text-red-400 transition-colors"
+                          title="Delete Chat"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </header>
 
                   {/* Messages container */}
@@ -2281,6 +2341,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               <X className="w-4 h-4" />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Video Call Room */}
+      <AnimatePresence>
+        {isVideoCallActive && activeChannel && (
+          <VideoCallRoom 
+            roomId={activeChannel.id} 
+            onEndCall={() => {
+              setIsVideoCallActive(false);
+              setShowMeetingMinutesModal(true);
+            }} 
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Meeting Minutes Modal */}
+      <AnimatePresence>
+        {showMeetingMinutesModal && (
+          <MeetingMinutesModal 
+            onClose={() => setShowMeetingMinutesModal(false)}
+            onConvertToTask={handleConvertToTask}
+          />
         )}
       </AnimatePresence>
 

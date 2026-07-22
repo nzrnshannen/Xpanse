@@ -3,6 +3,7 @@ from app.api.spaces import router as spaces_router
 from app.api.boards import router as boards_router
 from app.api.gcs import router as gcs_router
 from app.api.notes import router as notes_router
+from app.api.meetings import router as meetings_router
 
 __all__ = [
     "auth_router",
@@ -10,4 +11,5 @@ __all__ = [
     "boards_router",
     "gcs_router",
     "notes_router",
+    "meetings_router",
 ]

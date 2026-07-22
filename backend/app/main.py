@@ -4,7 +4,7 @@ from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import settings, init_db
-from app.api import auth_router, spaces_router, boards_router, gcs_router, notes_router
+from app.api import auth_router, spaces_router, boards_router, gcs_router, notes_router, meetings_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -40,6 +40,7 @@ app.include_router(spaces_router, prefix="/api/v1")
 app.include_router(boards_router, prefix="/api/v1")
 app.include_router(notes_router, prefix="/api/v1")
 app.include_router(gcs_router, prefix="/api/v1")
+app.include_router(meetings_router, prefix="/api/v1")
 
 @app.get("/", status_code=status.HTTP_200_OK)
 async def root() -> dict[str, str]:

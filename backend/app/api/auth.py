@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
-from sqlmodel import Session
+from sqlmodel import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_session
+from app.models.domain import User
+from app.core.security import get_password_hash, verify_password, create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -26,21 +29,33 @@ class TokenResponse(BaseModel):
 )
 async def signup(
     data: UserRegisterRequest, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> TokenResponse:
     """
-    User registration placeholder.
-    In production:
-    - Check if user already exists in DB
-    - Hash the password using passlib/bcrypt
-    - Create a new User object and save it to the DB
-    - Generate and return a secure JWT token
+    Registers a new user and returns a JWT token.
     """
-    # Simple mockup return for base structure
-    return TokenResponse(
-        access_token="mock_jwt_access_token_for_" + data.email,
-        token_type="bearer"
+    # Check if user already exists
+    result = await session.execute(select(User).where(User.email == data.email))
+    existing_user = result.scalars().first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this email already exists."
+        )
+
+    # Create new user
+    new_user = User(
+        name=data.name,
+        email=data.email,
+        hashed_password=get_password_hash(data.password)
     )
+    session.add(new_user)
+    await session.commit()
+    await session.refresh(new_user)
+
+    # Generate token
+    access_token = create_access_token(subject=new_user.id)
+    return TokenResponse(access_token=access_token, token_type="bearer")
 
 @router.post(
     "/login", 
@@ -49,22 +64,23 @@ async def signup(
 )
 async def login(
     data: UserLoginRequest, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> TokenResponse:
     """
-    User login placeholder.
-    In production:
-    - Query user by email
-    - Verify password hash matches
-    - Generate and return a JWT access token
+    Authenticates user credentials and returns a JWT token.
     """
-    # Simple mock response
-    if data.email == "error@example.com":
+    # Query user by email
+    result = await session.execute(select(User).where(User.email == data.email))
+    user = result.scalars().first()
+    
+    # Verify user exists and password is correct
+    if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    return TokenResponse(
-        access_token="mock_jwt_access_token_for_" + data.email,
-        token_type="bearer"
-    )
+        
+    # Generate token
+    access_token = create_access_token(subject=user.id)
+    return TokenResponse(access_token=access_token, token_type="bearer")

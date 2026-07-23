@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, model_validator
 from sqlmodel import Session, select
-from app.core.database import get_session
+from app.database import get_session
 from app.models.domain import Board, BoardColumn, Task, Space
 
 router = APIRouter(prefix="/boards", tags=["Boards & Tasks"])

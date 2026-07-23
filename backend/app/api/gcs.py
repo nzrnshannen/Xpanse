@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
 from sqlmodel import Session
-from app.core.database import get_session
+from app.database import get_session
 
 router = APIRouter(prefix="/gcs", tags=["Real-time Chat & WebSockets"])
 

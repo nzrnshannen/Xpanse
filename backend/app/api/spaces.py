@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlmodel import Session
 from openai import AsyncOpenAI
 from app.core.config import settings
-from app.core.database import get_session
+from app.database import get_session
 
 # Initialize AsyncOpenAI client instance
 openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or None)

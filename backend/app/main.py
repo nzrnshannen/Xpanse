@@ -3,7 +3,8 @@ from typing import AsyncGenerator
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core import settings, init_db
+from app.core import settings
+from app.database import init_db
 from app.api import auth_router, spaces_router, boards_router, gcs_router, notes_router, meetings_router
 
 @asynccontextmanager
@@ -13,7 +14,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Automatically generates SQLModel database tables on startup.
     """
     # Initialize DB (SQLite or PostgreSQL based on configured URI)
-    init_db()
+    await init_db()
     yield
 
 # Initialize FastAPI App

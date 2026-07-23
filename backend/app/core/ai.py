@@ -2,7 +2,7 @@ import json
 from openai import AsyncOpenAI
 from app.core.config import settings
 
-client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or "dummy_key")
 
 async def transcribe_audio(file_path: str) -> str:
     """

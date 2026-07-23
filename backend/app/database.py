@@ -9,6 +9,8 @@ from app.core.config import settings
 db_url = settings.DATABASE_URL
 if db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+elif db_url.startswith("sqlite:///"):
+    db_url = db_url.replace("sqlite:///", "sqlite+aiosqlite:///")
 
 engine = create_async_engine(db_url, echo=settings.DEBUG, future=True)
 

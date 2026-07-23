@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.database import get_session
 
 # Initialize AsyncOpenAI client instance
-openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or None)
+openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or "dummy_key")
 
 router = APIRouter(prefix="/spaces", tags=["Spaces"])
 

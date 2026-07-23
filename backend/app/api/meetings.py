@@ -3,9 +3,10 @@ import shutil
 import tempfile
 from typing import List, Dict, Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, UploadFile, File
-from sqlmodel import Session, select
+from sqlmodel import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_session
+from app.database import get_session
 from app.models.domain import Meeting, MeetingMinute, Room
 from app.core.ai import transcribe_audio, generate_meeting_minutes
 
@@ -38,8 +39,8 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 @router.websocket("/spaces/{space_id}/meetings/{room_id}")
-async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, session: Session = Depends(get_session)):
-    room = session.get(Room, room_id)
+async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, session: AsyncSession = Depends(get_session)):
+    room = await session.get(Room, room_id)
     if not room or room.space_id != space_id:
         await websocket.close(code=4004)
         return
@@ -56,21 +57,21 @@ async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, se
 
 
 @router.post("/meetings/{room_id}/audio", response_model=MeetingMinute)
-async def upload_meeting_audio(room_id: int, file: UploadFile = File(...), session: Session = Depends(get_session)):
+async def upload_meeting_audio(room_id: int, file: UploadFile = File(...), session: AsyncSession = Depends(get_session)):
     """
     Receives an audio file after a meeting ends, uses OpenAI Whisper to transcribe it,
     then uses GPT-4o-mini to generate structured Minutes of the Meeting (MoM).
     Returns the MoM.
     """
-    room = session.get(Room, room_id)
+    room = await session.get(Room, room_id)
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
 
     # Create a meeting record if we don't have a structured workflow for starting a meeting
     meeting = Meeting(room_id=room_id)
     session.add(meeting)
-    session.commit()
-    session.refresh(meeting)
+    await session.commit()
+    await session.refresh(meeting)
 
     temp_file_path = ""
     try:
@@ -94,8 +95,8 @@ async def upload_meeting_audio(room_id: int, file: UploadFile = File(...), sessi
             action_items=mom_data.get("action_items", [])
         )
         session.add(meeting_minute)
-        session.commit()
-        session.refresh(meeting_minute)
+        await session.commit()
+        await session.refresh(meeting_minute)
 
         return meeting_minute
     except Exception as e:
@@ -106,8 +107,9 @@ async def upload_meeting_audio(room_id: int, file: UploadFile = File(...), sessi
             os.remove(temp_file_path)
 
 @router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute)
-async def get_meeting_minutes(meeting_id: int, session: Session = Depends(get_session)):
-    minute = session.exec(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id)).first()
+async def get_meeting_minutes(meeting_id: int, session: AsyncSession = Depends(get_session)):
+    result = await session.execute(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id))
+    minute = result.scalars().first()
     if not minute:
         raise HTTPException(status_code=404, detail="Minutes not found for this meeting")
     return minute

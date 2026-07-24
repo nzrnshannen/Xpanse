@@ -8,5 +8,4 @@ pydantic[email]
 passlib[bcrypt]
 python-jose[cryptography]
 websockets
-openai
 python-multipart

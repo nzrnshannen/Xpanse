@@ -2,12 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlmodel import Session
-from openai import AsyncOpenAI
 from app.core.config import settings
 from app.database import get_session
-
-# Initialize AsyncOpenAI client instance
-openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY or "dummy_key")
 
 router = APIRouter(prefix="/spaces", tags=["Spaces"])
 
@@ -98,58 +94,4 @@ async def generate_invite(
         invite_link=f"https://xpanse.app/join/space_{space_id}_key_xyz",
         space_id=space_id
     )
-
-@router.websocket("/{space_id}/ai-chat")
-async def websocket_ai_chat_endpoint(websocket: WebSocket, space_id: int) -> None:
-    """
-    WebSocket endpoint for live, async token-streaming chat with the Space co-pilot.
-    Reads current Kanban tasks as context, calls GPT-4o-mini, and streams response tokens.
-    """
-    await websocket.accept()
-    
-    # Placeholder context tasks for Kanban boards
-    mock_tasks = [
-        {"id": "t1", "title": "Plan core workspace routes", "column": "todo", "category": "Dev"},
-        {"id": "t2", "title": "Write FastAPI WebSocket models", "column": "progress", "category": "Backend"},
-        {"id": "t3", "title": "Finalize Tailwind design tokens", "column": "done", "category": "Design"},
-        {"id": "t4", "title": "Integrate streaming OpenAI assistant", "column": "progress", "category": "AI Development"}
-    ]
-    
-    system_prompt = (
-        "You are Xpanse AI, a helpful native workspace co-pilot built for the team collaboration tool 'Xpanse'. "
-        "You have access to the current space's Kanban board tasks. Here is the list of current tasks on the board:\n"
-        f"{mock_tasks}\n\n"
-        "Use this context to help answer user questions. For example, if they ask about progress or task states, reference this board. "
-        "Keep your responses concise, helpful, and formatted in Markdown."
-    )
-    
-    try:
-        while True:
-            # Wait for user query prompt
-            user_query = await websocket.receive_text()
-            
-            try:
-                # Call OpenAI streaming completions
-                response = await openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_query}
-                    ],
-                    stream=True
-                )
-                
-                # Stream token chunks in real-time
-                async for chunk in response:
-                    token = chunk.choices[0].delta.content
-                    if token:
-                        await websocket.send_text(token)
-                        
-            except Exception as inner_error:
-                # Send error details back to screen
-                await websocket.send_text(f"\n[AI Error: {str(inner_error)}]")
-            
-    except WebSocketDisconnect:
-        # Gracefully swallow client terminations
-        pass
 

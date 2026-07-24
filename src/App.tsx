@@ -4,8 +4,6 @@ import { Hero } from './components/Hero';
 import { FeatureGrid } from './components/FeatureGrid';
 import { AuthModal } from './components/AuthModal';
 import { Dashboard } from './components/Dashboard';
-import { Compass } from 'lucide-react';
-
 const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -37,10 +35,7 @@ const App: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-grow flex flex-col">
         {/* Hero Section */}
-        <Hero 
-          onGetStartedClick={() => openAuth('signup')} 
-          onJoinInviteClick={() => openAuth('signup')} 
-        />
+        <Hero />
 
         {/* Feature Preview Section */}
         <FeatureGrid />

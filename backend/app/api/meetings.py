@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
 from app.models.domain import Meeting, MeetingMinute, Room
-from app.core.ai import transcribe_audio, generate_meeting_minutes
 
 router = APIRouter(tags=["meetings"])
 
@@ -56,55 +55,7 @@ async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, se
         await manager.broadcast(room_id, {"type": "peer-left"})
 
 
-@router.post("/meetings/{room_id}/audio", response_model=MeetingMinute)
-async def upload_meeting_audio(room_id: int, file: UploadFile = File(...), session: AsyncSession = Depends(get_session)):
-    """
-    Receives an audio file after a meeting ends, uses OpenAI Whisper to transcribe it,
-    then uses GPT-4o-mini to generate structured Minutes of the Meeting (MoM).
-    Returns the MoM.
-    """
-    room = await session.get(Room, room_id)
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
 
-    # Create a meeting record if we don't have a structured workflow for starting a meeting
-    meeting = Meeting(room_id=room_id)
-    session.add(meeting)
-    await session.commit()
-    await session.refresh(meeting)
-
-    temp_file_path = ""
-    try:
-        # Save uploaded file temporarily
-        suffix = os.path.splitext(file.filename)[1]
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
-            shutil.copyfileobj(file.file, temp_file)
-            temp_file_path = temp_file.name
-
-        # Transcribe using Whisper
-        transcript = await transcribe_audio(temp_file_path)
-
-        # Generate MoM
-        mom_data = await generate_meeting_minutes(transcript)
-
-        # Save to database
-        meeting_minute = MeetingMinute(
-            meeting_id=meeting.id,
-            summary=mom_data.get("summary", ""),
-            decisions=mom_data.get("decisions", []),
-            action_items=mom_data.get("action_items", [])
-        )
-        session.add(meeting_minute)
-        await session.commit()
-        await session.refresh(meeting_minute)
-
-        return meeting_minute
-    except Exception as e:
-        print(f"Error processing meeting audio: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process meeting audio")
-    finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
 
 @router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute)
 async def get_meeting_minutes(meeting_id: int, session: AsyncSession = Depends(get_session)):

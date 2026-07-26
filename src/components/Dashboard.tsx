@@ -556,7 +556,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             channels: s.channels.map(c => {
               if (c.id === activeChannelId) {
                 const updatedMessages = c.messages.map(m => {
-                  if (m.id === activeCallMessageId) {
+                  if (m.type === 'call_started' && m.callData?.status === 'active') {
                     return {
                       ...m,
                       callData: { ...m.callData, status: 'ended' }

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface VideoCallRoomProps {
@@ -12,6 +12,44 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    const startVideo = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      } catch (err) {
+        console.error("Error accessing media devices.", err);
+        setIsVideoOff(true);
+      }
+    };
+
+    const stopVideo = () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+
+    if (!isVideoOff) {
+      startVideo();
+    } else {
+      stopVideo();
+    }
+
+    return () => {
+      stopVideo();
+    };
+  }, [isVideoOff]);
+
   // Mock participants
   const participants = [
     { id: 1, name: "You", isMe: true },
@@ -41,10 +79,19 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
       <div className="flex-1 p-4 grid grid-cols-2 gap-4 auto-rows-fr">
         {participants.map(p => (
           <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center">
-            {/* Fallback avatar if video is off */}
-            <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">
-              <User className="w-8 h-8 text-neutral-500" />
-            </div>
+            {p.isMe && !isVideoOff ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+            ) : (
+              <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center text-2xl font-bold text-neutral-400">
+                {p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+            )}
             
             <div className="absolute bottom-4 left-4 flex items-center gap-2">
               <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white">

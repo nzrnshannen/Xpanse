@@ -31,6 +31,7 @@ import { Notes } from './Notes';
 import { TaskModal } from './TaskModal';
 import { VideoCallRoom } from './VideoCallRoom';
 import { MeetingMinutesModal } from './MeetingMinutesModal';
+import { PreJoinModal } from './PreJoinModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -143,6 +144,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   // Video Call State
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [showPreJoinModal, setShowPreJoinModal] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
 
   // Sort State
@@ -1770,7 +1772,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                     <div className="flex items-center gap-2">
                       {!activeChannel.isAI && (
                         <button 
-                          onClick={() => setIsVideoCallActive(true)}
+                          onClick={() => setShowPreJoinModal(true)}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg text-xs font-bold transition-colors border border-purple-500/20"
                         >
                           <Video className="w-3.5 h-3.5" />
@@ -2341,6 +2343,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               <X className="w-4 h-4" />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Pre-Join Modal */}
+      <AnimatePresence>
+        {showPreJoinModal && activeChannel && (
+          <PreJoinModal 
+            onJoin={() => {
+              setShowPreJoinModal(false);
+              setIsVideoCallActive(true);
+            }}
+            onCancel={() => setShowPreJoinModal(false)}
+          />
         )}
       </AnimatePresence>
 

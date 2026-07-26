@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, User } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface VideoCallRoomProps {
   roomId: string;
@@ -22,50 +22,64 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
 
-  // Handle Local Video Stream
+  // Handle Local Media Stream
   useEffect(() => {
     let mounted = true;
 
-    const startLocalVideo = async () => {
+    const initLocalMedia = async () => {
       try {
-        if (!isVideoOff) {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (mounted) {
-            localStreamRef.current = stream;
-            if (localVideoRef.current) {
-              localVideoRef.current.srcObject = stream;
-            }
-          } else {
-            // Clean up if unmounted before stream resolves
-            stream.getTracks().forEach(track => track.stop());
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        
+        if (mounted) {
+          // Apply initial states
+          stream.getVideoTracks().forEach(track => {
+            track.enabled = !isVideoOff;
+          });
+          stream.getAudioTracks().forEach(track => {
+            track.enabled = !isMuted;
+          });
+
+          localStreamRef.current = stream;
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
           }
+        } else {
+          // Clean up if unmounted before stream resolves
+          stream.getTracks().forEach(track => track.stop());
         }
       } catch (err) {
-        console.error("Error accessing camera:", err);
+        console.error("Error accessing media devices:", err);
       }
     };
 
-    const stopLocalVideo = () => {
+    initLocalMedia();
+
+    return () => {
+      mounted = false;
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => track.stop());
         localStreamRef.current = null;
       }
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = null;
-      }
     };
+  }, []); // Run once on mount
 
-    if (isVideoOff) {
-      stopLocalVideo();
-    } else {
-      startLocalVideo();
+  // Sync Video Toggle
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = !isVideoOff;
+      });
     }
-
-    return () => {
-      mounted = false;
-      stopLocalVideo();
-    };
   }, [isVideoOff]);
+
+  // Sync Audio Toggle
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+    }
+  }, [isMuted]);
 
   const handleToggleScreenShare = async () => {
     if (isScreenSharing) {

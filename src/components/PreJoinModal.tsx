@@ -33,8 +33,11 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
     // Enumerate devices
     const getDevices = async () => {
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        const initialStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         const devices = await navigator.mediaDevices.enumerateDevices();
+        
+        // Stop the initial permission stream to prevent hardware leak
+        initialStream.getTracks().forEach(track => track.stop());
         
         const video = devices.filter(d => d.kind === 'videoinput');
         const audioIn = devices.filter(d => d.kind === 'audioinput');

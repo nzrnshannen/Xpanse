@@ -75,6 +75,7 @@ interface Message {
     duration?: string;
     participantCount?: number;
     startedBy?: string;
+    status?: 'active' | 'ended';
   };
 }
 
@@ -157,6 +158,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const [activeCallMessageId, setActiveCallMessageId] = useState<string | null>(null);
 
   // Sort State
   type SortOption = 'alpha_az' | 'alpha_za' | 'date_newest' | 'date_oldest';
@@ -524,14 +526,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setIsVideoCallActive(true);
     setCallStartTime(Date.now());
     
+    const messageId = Math.random().toString(36).substr(2, 9);
+    setActiveCallMessageId(messageId);
+    
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     addSystemMessage({
-      id: Math.random().toString(36).substr(2, 9),
+      id: messageId,
       type: 'call_started',
       sender: 'System',
       text: 'Meeting started',
       time,
-      callData: { startedBy: 'You' }
+      callData: { startedBy: 'You', status: 'active' }
     });
   };
 
@@ -539,22 +544,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setIsVideoCallActive(false);
     setShowMeetingMinutesModal(true);
     
-    if (endForAll) {
+    if (endForAll && activeCallMessageId) {
       const endTime = Date.now();
       const durationMs = callStartTime ? endTime - callStartTime : 0;
       const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
-      addSystemMessage({
-        id: Math.random().toString(36).substr(2, 9),
-        type: 'call_ended',
-        sender: 'System',
-        text: 'Meeting ended',
-        time,
-        callData: { duration: formatDuration(durationMs), participantCount: 3 }
-      });
+      setSpaces(prev => prev.map(s => {
+        if (s.id === activeSpaceId) {
+          return {
+            ...s,
+            channels: s.channels.map(c => {
+              if (c.id === activeChannelId) {
+                const updatedMessages = c.messages.map(m => {
+                  if (m.id === activeCallMessageId) {
+                    return {
+                      ...m,
+                      callData: { ...m.callData, status: 'ended' }
+                    };
+                  }
+                  return m;
+                });
+                
+                return {
+                  ...c,
+                  messages: [
+                    ...updatedMessages,
+                    {
+                      id: Math.random().toString(36).substr(2, 9),
+                      type: 'call_ended',
+                      sender: 'System',
+                      text: 'Meeting ended',
+                      time,
+                      callData: { duration: formatDuration(durationMs), participantCount: 3 }
+                    }
+                  ]
+                };
+              }
+              return c;
+            })
+          };
+        }
+        return s;
+      }));
     }
     
     setCallStartTime(null);
+    setActiveCallMessageId(null);
   };
 
   // 5. Action Handler: Send Message
@@ -1890,13 +1925,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                             </div>
                             <span className="font-bold text-neutral-300 text-sm mb-1">{msg.text} by {msg.callData?.startedBy}</span>
                             <span className="text-[10px] text-neutral-500 mb-4">{msg.time}</span>
-                            <button 
-                              onClick={handleStartVideoCall}
-                              disabled={isVideoCallActive}
-                              className="w-full py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              Join Call
-                            </button>
+                            
+                            {msg.callData?.status === 'ended' ? (
+                              <button disabled className="w-full py-2 bg-neutral-800 text-neutral-500 font-bold text-xs rounded-xl cursor-not-allowed">
+                                Call Ended
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={handleStartVideoCall}
+                                disabled={isVideoCallActive}
+                                className="w-full py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Join Call
+                              </button>
+                            )}
                           </div>
                         )}
                         {msg.type === 'call_ended' && (

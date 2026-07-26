@@ -43,6 +43,7 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   const [color, setColor] = useState(spaceColor);
   const [profileImage, setProfileImage] = useState(isInitialImage ? spaceIcon : '');
   const [showToast, setShowToast] = useState('');
+  const [showNameChangeConfirm, setShowNameChangeConfirm] = useState(false);
 
   // Collaborator State
   const [kickMemberId, setKickMemberId] = useState<string | null>(null);
@@ -73,6 +74,14 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   };
 
   const handleSaveProfile = () => {
+    if (name !== initialName) {
+      setShowNameChangeConfirm(true);
+    } else {
+      commitProfileChanges();
+    }
+  };
+
+  const commitProfileChanges = () => {
     const finalIcon = profileMode === 'image' ? profileImage : '';
     const finalColor = profileMode === 'color' ? color : '';
     const updates: any = { color: finalColor, icon: finalIcon };
@@ -83,6 +92,7 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
       triggerToast('Profile updated successfully.');
     }
     onUpdateSpace(updates);
+    setShowNameChangeConfirm(false);
   };
 
   const handleKickMember = () => {
@@ -235,6 +245,45 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
                     Save Changes
                   </button>
                 </div>
+
+                {/* Name Change Confirmation Modal Overlay */}
+                <AnimatePresence>
+                  {showNameChangeConfirm && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6"
+                    >
+                      <motion.div
+                        initial={{ scale: 0.95 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0.95 }}
+                        className="bg-neutral-900 border border-white/[0.1] rounded-xl p-5 w-full max-w-sm shadow-2xl"
+                      >
+                        <h3 className="text-sm font-bold text-white mb-2">Confirm Name Change</h3>
+                        <p className="text-xs text-neutral-400 leading-relaxed mb-4">
+                          Are you sure you want to change the space name to <strong className="text-white">{name}</strong>? This will notify all active members.
+                        </p>
+                        
+                        <div className="flex justify-end gap-2 mt-2">
+                          <button 
+                            onClick={() => setShowNameChangeConfirm(false)}
+                            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-xs font-bold transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            onClick={commitProfileChanges}
+                            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-colors"
+                          >
+                            Yes, change it
+                          </button>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
 

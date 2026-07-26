@@ -526,18 +526,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setIsVideoCallActive(true);
     setCallStartTime(Date.now());
     
-    const messageId = Math.random().toString(36).substr(2, 9);
-    setActiveCallMessageId(messageId);
-    
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    addSystemMessage({
-      id: messageId,
-      type: 'call_started',
-      sender: 'System',
-      text: 'Meeting started',
-      time,
-      callData: { startedBy: 'You', status: 'active' }
-    });
+    // Check if there's already an active call in this channel
+    const activeSpace = spaces.find(s => s.id === activeSpaceId);
+    const currentChannel = activeSpace?.channels.find(c => c.id === activeChannelId);
+    const existingActiveCall = currentChannel?.messages.find(
+      m => m.type === 'call_started' && m.callData?.status === 'active'
+    );
+
+    if (existingActiveCall) {
+      // Join existing call without spamming a new card
+      setActiveCallMessageId(existingActiveCall.id || null);
+    } else {
+      // Create new call card
+      const messageId = Math.random().toString(36).substr(2, 9);
+      setActiveCallMessageId(messageId);
+      
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      addSystemMessage({
+        id: messageId,
+        type: 'call_started',
+        sender: 'System',
+        text: 'Meeting started',
+        time,
+        callData: { startedBy: 'You', status: 'active' }
+      });
+    }
   };
 
   const handleEndVideoCall = (endForAll = true) => {

@@ -535,22 +535,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     });
   };
 
-  const handleEndVideoCall = () => {
+  const handleEndVideoCall = (endForAll = true) => {
     setIsVideoCallActive(false);
     setShowMeetingMinutesModal(true);
     
-    const endTime = Date.now();
-    const durationMs = callStartTime ? endTime - callStartTime : 0;
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (endForAll) {
+      const endTime = Date.now();
+      const durationMs = callStartTime ? endTime - callStartTime : 0;
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      addSystemMessage({
+        id: Math.random().toString(36).substr(2, 9),
+        type: 'call_ended',
+        sender: 'System',
+        text: 'Meeting ended',
+        time,
+        callData: { duration: formatDuration(durationMs), participantCount: 3 }
+      });
+    }
     
-    addSystemMessage({
-      id: Math.random().toString(36).substr(2, 9),
-      type: 'call_ended',
-      sender: 'System',
-      text: 'Meeting ended',
-      time,
-      callData: { duration: formatDuration(durationMs), participantCount: 3 }
-    });
     setCallStartTime(null);
   };
 

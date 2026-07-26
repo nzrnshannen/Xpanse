@@ -4,15 +4,17 @@ import { motion } from 'framer-motion';
 
 interface VideoCallRoomProps {
   roomId: string;
-  onEndCall: () => void;
+  onEndCall: (endForAll?: boolean) => void;
   initialIsMuted?: boolean;
   initialIsVideoOff?: boolean;
+  isHost?: boolean;
 }
 
-export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVideoOff = false }: VideoCallRoomProps) {
+export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVideoOff = false, isHost = true }: VideoCallRoomProps) {
   const [isMuted, setIsMuted] = useState(initialIsMuted);
   const [isVideoOff, setIsVideoOff] = useState(initialIsVideoOff);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [showEndCallModal, setShowEndCallModal] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -234,13 +236,59 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
         <div className="w-px h-8 bg-white/10 mx-2" />
         
         <button 
-          onClick={onEndCall}
+          onClick={() => setShowEndCallModal(true)}
           className="px-6 py-4 rounded-2xl bg-red-600 text-white hover:bg-red-500 font-bold flex items-center gap-2 transition-colors shadow-lg shadow-red-600/20"
         >
           <PhoneOff className="w-5 h-5" />
           End Call
         </button>
       </div>
+
+      {/* End Call Modal */}
+      <AnimatePresence>
+        {showEndCallModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0a0a0c] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <h3 className="text-xl font-bold text-white mb-2">Leave Video Call</h3>
+              <p className="text-neutral-400 mb-8 text-sm">
+                {isHost 
+                  ? "You are the host. Do you want to end the meeting for everyone or just leave?"
+                  : "Are you sure you want to leave this video call?"}
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                {isHost && (
+                  <button 
+                    onClick={() => onEndCall(true)}
+                    className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-lg shadow-red-600/20"
+                  >
+                    End Meeting for All
+                  </button>
+                )}
+                
+                <button 
+                  onClick={() => onEndCall(false)}
+                  className={`w-full py-3 rounded-xl font-bold transition-colors ${isHost ? 'bg-neutral-800 text-white hover:bg-neutral-700 border border-white/10' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20'}`}
+                >
+                  Leave Call
+                </button>
+                
+                <button 
+                  onClick={() => setShowEndCallModal(false)}
+                  className="w-full py-3 rounded-xl bg-transparent text-neutral-400 hover:text-white font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

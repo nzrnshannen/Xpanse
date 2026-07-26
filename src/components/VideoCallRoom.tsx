@@ -1,85 +1,126 @@
-import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useRef, useEffect } from 'react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface VideoCallRoomProps {
   roomId: string;
-  onEndCall: () => void;
+  onEndCall: (endForAll?: boolean) => void;
+  initialIsMuted?: boolean;
+  initialIsVideoOff?: boolean;
+  isHost?: boolean;
 }
 
-export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
+export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVideoOff = false, isHost = true }: VideoCallRoomProps) {
+  const [isMuted, setIsMuted] = useState(initialIsMuted);
+  const [isVideoOff, setIsVideoOff] = useState(initialIsVideoOff);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [showEndCallModal, setShowEndCallModal] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const audioStreamRef = useRef<MediaStream | null>(null);
+  
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
 
+  // Handle Local Media Stream
   useEffect(() => {
-    const startAudio = async () => {
+    let mounted = true;
+
+    const initLocalMedia = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        audioStreamRef.current = stream;
-      } catch (err) {
-        console.error("Error accessing audio device.", err);
-        setIsMuted(true);
-      }
-    };
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        
+        if (mounted) {
+          // Apply initial states
+          stream.getVideoTracks().forEach(track => {
+            track.enabled = !isVideoOff;
+          });
+          stream.getAudioTracks().forEach(track => {
+            track.enabled = !isMuted;
+          });
 
-    const stopAudio = () => {
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach(track => track.stop());
-        audioStreamRef.current = null;
-      }
-    };
-
-    if (!isMuted) {
-      startAudio();
-    } else {
-      stopAudio();
-    }
-
-    return () => {
-      stopAudio();
-    };
-  }, [isMuted]);
-
-  useEffect(() => {
-    const startVideo = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          localStreamRef.current = stream;
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+          }
+        } else {
+          // Clean up if unmounted before stream resolves
+          stream.getTracks().forEach(track => track.stop());
         }
       } catch (err) {
-        console.error("Error accessing media devices.", err);
-        setIsVideoOff(true);
+        console.error("Error accessing media devices:", err);
       }
     };
 
-    const stopVideo = () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-        streamRef.current = null;
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    };
-
-    if (!isVideoOff) {
-      startVideo();
-    } else {
-      stopVideo();
-    }
+    initLocalMedia();
 
     return () => {
-      stopVideo();
+      mounted = false;
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+        localStreamRef.current = null;
+      }
     };
+  }, []); // Run once on mount
+
+  // Sync Video Toggle
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach(track => {
+        track.enabled = !isVideoOff;
+      });
+    }
   }, [isVideoOff]);
 
+  // Sync Audio Toggle
+  useEffect(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted;
+      });
+    }
+  }, [isMuted]);
+
+  const handleToggleScreenShare = async () => {
+    if (isScreenSharing) {
+      stopScreenShare();
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        streamRef.current = stream;
+        setIsScreenSharing(true);
+        
+        // Handle native stop sharing button
+        stream.getVideoTracks()[0].onended = () => {
+          stopScreenShare();
+        };
+      } catch (err) {
+        console.error("Error sharing screen:", err);
+      }
+    }
+  };
+
+  const stopScreenShare = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setIsScreenSharing(false);
+  };
+
+  useEffect(() => {
+    if (isScreenSharing && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [isScreenSharing]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopScreenShare();
+    };
+  }, []);
+  
   // Mock participants
   const participants = [
     { id: 1, name: "You", isMe: true },
@@ -105,36 +146,84 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
         </div>
       </div>
 
-      {/* Video Grid */}
-      <div className="flex-1 p-4 grid grid-cols-2 gap-4 auto-rows-fr">
-        {participants.map(p => (
-          <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center">
-            {p.isMe && !isVideoOff ? (
-              <video
+      {/* Video Grid / Presentation Layout */}
+      <div className={`flex-1 p-4 flex ${isScreenSharing ? 'flex-row' : 'flex-col'} gap-4 overflow-hidden`}>
+        {isScreenSharing ? (
+          <>
+            {/* Main Presentation Stage */}
+            <div className="flex-1 bg-black rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center relative">
+              <video 
                 ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover scale-x-[-1]"
+                autoPlay 
+                playsInline 
+                className="w-full h-full object-contain"
               />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center text-2xl font-bold text-neutral-400">
-                {p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-              </div>
-            )}
-            
-            <div className="absolute bottom-4 left-4 flex items-center gap-2">
-              <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white">
-                {p.name}
+              <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white shadow-lg">
+                You are sharing your screen
               </div>
             </div>
-            {(p.isMe && isMuted) && (
-              <div className="absolute top-4 right-4 p-2 rounded-full bg-red-500/20 text-red-500">
-                <MicOff className="w-4 h-4" />
+            
+            {/* Participants Sidebar */}
+            <div className="w-64 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+              {participants.map(p => (
+                <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center aspect-video flex-shrink-0 shadow-lg">
+                  {p.isMe && !isVideoOff ? (
+                    <video 
+                      ref={localVideoRef}
+                      autoPlay 
+                      playsInline 
+                      muted 
+                      className="w-full h-full object-cover -scale-x-100"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center">
+                      <User className="w-5 h-5 text-neutral-500" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-medium text-white">
+                    {p.name}
+                  </div>
+                  {(p.isMe && isMuted) && (
+                    <div className="absolute top-2 right-2 p-1.5 rounded-full bg-red-500/20 text-red-500">
+                      <MicOff className="w-3 h-3" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 grid grid-cols-2 gap-4 auto-rows-fr">
+            {participants.map(p => (
+              <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center shadow-lg">
+                {p.isMe && !isVideoOff ? (
+                  <video 
+                    ref={localVideoRef}
+                    autoPlay 
+                    playsInline 
+                    muted 
+                    className="w-full h-full object-cover -scale-x-100"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">
+                    <User className="w-8 h-8 text-neutral-500" />
+                  </div>
+                )}
+                
+                <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                  <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white">
+                    {p.name}
+                  </div>
+                </div>
+                {(p.isMe && isMuted) && (
+                  <div className="absolute top-4 right-4 p-2 rounded-full bg-red-500/20 text-red-500">
+                    <MicOff className="w-4 h-4" />
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
       {/* Bottom Toolbar */}
@@ -152,7 +241,7 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
           {isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
         </button>
         <button 
-          onClick={() => setIsScreenSharing(!isScreenSharing)}
+          onClick={handleToggleScreenShare}
           className={`p-4 rounded-2xl transition-colors ${isScreenSharing ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-neutral-800 text-white hover:bg-neutral-700 border border-white/[0.05]'}`}
         >
           <MonitorUp className="w-5 h-5" />
@@ -161,13 +250,59 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
         <div className="w-px h-8 bg-white/10 mx-2" />
         
         <button 
-          onClick={onEndCall}
+          onClick={() => setShowEndCallModal(true)}
           className="px-6 py-4 rounded-2xl bg-red-600 text-white hover:bg-red-500 font-bold flex items-center gap-2 transition-colors shadow-lg shadow-red-600/20"
         >
           <PhoneOff className="w-5 h-5" />
           End Call
         </button>
       </div>
+
+      {/* End Call Modal */}
+      <AnimatePresence>
+        {showEndCallModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#0a0a0c] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+            >
+              <h3 className="text-xl font-bold text-white mb-2">Leave Video Call</h3>
+              <p className="text-neutral-400 mb-8 text-sm">
+                {isHost 
+                  ? "You are the host. Do you want to end the meeting for everyone or just leave?"
+                  : "Are you sure you want to leave this video call?"}
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                {isHost && (
+                  <button 
+                    onClick={() => onEndCall(true)}
+                    className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold transition-colors shadow-lg shadow-red-600/20"
+                  >
+                    End Meeting for All
+                  </button>
+                )}
+                
+                <button 
+                  onClick={() => onEndCall(false)}
+                  className={`w-full py-3 rounded-xl font-bold transition-colors ${isHost ? 'bg-neutral-800 text-white hover:bg-neutral-700 border border-white/10' : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20'}`}
+                >
+                  Leave Call
+                </button>
+                
+                <button 
+                  onClick={() => setShowEndCallModal(false)}
+                  className="w-full py-3 rounded-xl bg-transparent text-neutral-400 hover:text-white font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

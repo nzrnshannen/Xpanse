@@ -25,6 +25,7 @@ import {
   CheckSquare,
   Video,
   Calendar,
+  PhoneOff,
   Settings2
 } from 'lucide-react';
 
@@ -67,9 +68,17 @@ interface MockBoard {
 }
 
 interface Message {
+  id?: string;
   sender: string;
   text: string;
   time: string;
+  type?: 'text' | 'call_started' | 'call_ended';
+  callData?: {
+    duration?: string;
+    participantCount?: number;
+    startedBy?: string;
+    status?: 'active' | 'ended';
+  };
 }
 
 interface MockChannel {
@@ -157,9 +166,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
 
   // Video Call State
-  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showPreJoinModal, setShowPreJoinModal] = useState(false);
+  const [initialCallIsMuted, setInitialCallIsMuted] = useState(false);
+  const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
+  const [callStartTime, setCallStartTime] = useState<number | null>(null);
+  const [activeCallMessageId, setActiveCallMessageId] = useState<string | null>(null);
   const [showSpaceSettingsModal, setShowSpaceSettingsModal] = useState(false);
 
   // Sort State
@@ -495,6 +508,132 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     } else if (e.key === 'Escape') {
       setShowMentionPopup(false);
     }
+  };
+
+  // Action Handlers: Call Events
+  const formatDuration = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0 || hours > 0) parts.push(`${minutes}m`);
+    parts.push(`${seconds}s`);
+    
+    return parts.join(' ');
+  };
+
+  const addSystemMessage = (msg: Message) => {
+    if (!activeSpaceId || !activeChannelId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          channels: s.channels.map(c => {
+            if (c.id === activeChannelId) {
+              return { ...c, messages: [...c.messages, msg] };
+            }
+            return c;
+          })
+        };
+      }
+      return s;
+    }));
+  };
+
+  const handleStartVideoCall = () => {
+    setShowPreJoinModal(true);
+  };
+
+  const handleConfirmJoin = (isMuted: boolean, isVideoOff: boolean) => {
+    setShowPreJoinModal(false);
+    setInitialCallIsMuted(isMuted);
+    setInitialCallIsVideoOff(isVideoOff);
+    setIsVideoCallActive(true);
+    setCallStartTime(Date.now());
+    
+    // Check if there's already an active call in this channel
+    const activeSpace = spaces.find(s => s.id === activeSpaceId);
+    const currentChannel = activeSpace?.channels.find(c => c.id === activeChannelId);
+    const existingActiveCall = currentChannel?.messages.find(
+      m => m.type === 'call_started' && m.callData?.status === 'active'
+    );
+
+    if (existingActiveCall) {
+      // Join existing call without spamming a new card
+      setActiveCallMessageId(existingActiveCall.id || null);
+    } else {
+      // Create new call card
+      const messageId = Math.random().toString(36).substr(2, 9);
+      setActiveCallMessageId(messageId);
+      
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      addSystemMessage({
+        id: messageId,
+        type: 'call_started',
+        sender: 'System',
+        text: 'Meeting started',
+        time,
+        callData: { startedBy: 'You', status: 'active' }
+      });
+    }
+  };
+
+  const handleEndVideoCall = (endForAll = true) => {
+    setIsVideoCallActive(false);
+    
+    if (endForAll) {
+      setShowMeetingMinutesModal(true);
+    }
+    
+    if (endForAll && activeCallMessageId) {
+      const endTime = Date.now();
+      const durationMs = callStartTime ? endTime - callStartTime : 0;
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      setSpaces(prev => prev.map(s => {
+        if (s.id === activeSpaceId) {
+          return {
+            ...s,
+            channels: s.channels.map(c => {
+              if (c.id === activeChannelId) {
+                const updatedMessages = c.messages.map(m => {
+                  if (m.type === 'call_started' && m.callData?.status === 'active') {
+                    return {
+                      ...m,
+                      callData: { ...m.callData, status: 'ended' as const }
+                    } as Message;
+                  }
+                  return m;
+                });
+                
+                return {
+                  ...c,
+                  messages: [
+                    ...updatedMessages,
+                    {
+                      id: Math.random().toString(36).substr(2, 9),
+                      type: 'call_ended',
+                      sender: 'System',
+                      text: 'Meeting ended',
+                      time,
+                      callData: { duration: formatDuration(durationMs), participantCount: 3 }
+                    }
+                  ]
+                };
+              }
+              return c;
+            })
+          };
+        }
+        return s;
+      }));
+    }
+    
+    setCallStartTime(null);
+    setActiveCallMessageId(null);
   };
 
   // 5. Action Handler: Send Message
@@ -1815,7 +1954,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                     <div className="flex items-center gap-2">
                       {!activeChannel.isAI && (
                         <button 
-                          onClick={() => setShowPreJoinModal(true)}
+                          onClick={handleStartVideoCall}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-lg text-xs font-bold transition-colors border border-purple-500/20"
                         >
                           <Video className="w-3.5 h-3.5" />
@@ -1837,19 +1976,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   {/* Messages container */}
                   <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 pr-4">
                     {activeChannel.messages.map((msg, idx) => (
-                      <div key={idx} className="flex gap-3 text-xs items-start max-w-2xl">
-                        <div className="h-7 w-7 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-[9px] flex-shrink-0 uppercase">
-                          {msg.sender.substring(0, 2)}
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-neutral-300">{msg.sender}</span>
-                            <span className="text-[9px] text-neutral-500">{msg.time}</span>
+                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'call_ended' ? 'justify-center my-4' : 'gap-3 text-xs items-start max-w-2xl'}`}>
+                        {msg.type === 'call_started' && (
+                          <div className="flex flex-col items-center bg-[#070709] border border-white/[0.05] p-4 rounded-2xl shadow-xl w-64 text-center">
+                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-3 text-purple-400">
+                              <Video className="w-5 h-5" />
+                            </div>
+                            <span className="font-bold text-neutral-300 text-sm mb-1">{msg.text} by {msg.callData?.startedBy}</span>
+                            <span className="text-[10px] text-neutral-500 mb-4">{msg.time}</span>
+                            
+                            {msg.callData?.status === 'ended' ? (
+                              <button disabled className="w-full py-2 bg-neutral-800 text-neutral-500 font-bold text-xs rounded-xl cursor-not-allowed">
+                                Call Ended
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={handleStartVideoCall}
+                                disabled={isVideoCallActive}
+                                className="w-full py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Join Call
+                              </button>
+                            )}
                           </div>
-                          <p className="mt-1 text-neutral-400 bg-white/[0.02] border border-white/[0.03] p-3 rounded-xl leading-relaxed self-start break-words whitespace-pre-wrap">
-                            {renderMessageText(msg.text)}
-                          </p>
-                        </div>
+                        )}
+                        {msg.type === 'call_ended' && (
+                          <div className="flex flex-col items-center bg-[#070709] border border-white/[0.05] p-4 rounded-2xl shadow-xl w-64 text-center">
+                            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mb-3 text-neutral-400">
+                              <PhoneOff className="w-5 h-5" />
+                            </div>
+                            <span className="font-bold text-neutral-300 text-sm mb-1">{msg.text}</span>
+                            <span className="text-[10px] text-neutral-500 mb-3">{msg.time}</span>
+                            <div className="flex items-center gap-4 text-xs font-medium text-neutral-400 w-full justify-center bg-black/20 p-2 rounded-lg">
+                              <div className="flex flex-col items-center">
+                                <span className="text-neutral-500 text-[10px] uppercase">Duration</span>
+                                <span>{msg.callData?.duration}</span>
+                              </div>
+                              <div className="w-px h-6 bg-white/[0.05]" />
+                              <div className="flex flex-col items-center">
+                                <span className="text-neutral-500 text-[10px] uppercase">Participants</span>
+                                <span>{msg.callData?.participantCount}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {(!msg.type || msg.type === 'text') && (
+                          <>
+                            <div className="h-7 w-7 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 flex items-center justify-center font-bold text-[9px] flex-shrink-0 uppercase">
+                              {msg.sender.substring(0, 2)}
+                            </div>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-neutral-300">{msg.sender}</span>
+                                <span className="text-[9px] text-neutral-500">{msg.time}</span>
+                              </div>
+                              <p className="mt-1 text-neutral-400 bg-white/[0.02] border border-white/[0.03] p-3 rounded-xl leading-relaxed self-start break-words whitespace-pre-wrap">
+                                {renderMessageText(msg.text)}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -2443,13 +2629,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
       {/* Pre-Join Modal */}
       <AnimatePresence>
-        {showPreJoinModal && activeChannel && (
+        {showPreJoinModal && (
           <PreJoinModal 
-            onJoin={() => {
-              setShowPreJoinModal(false);
-              setIsVideoCallActive(true);
-            }}
-            onCancel={() => setShowPreJoinModal(false)}
+            onClose={() => setShowPreJoinModal(false)}
+            onJoin={handleConfirmJoin}
           />
         )}
       </AnimatePresence>
@@ -2459,10 +2642,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         {isVideoCallActive && activeChannel && (
           <VideoCallRoom 
             roomId={activeChannel.id} 
-            onEndCall={() => {
-              setIsVideoCallActive(false);
-              setShowMeetingMinutesModal(true);
-            }} 
+            onEndCall={handleEndVideoCall} 
+            initialIsMuted={initialCallIsMuted}
+            initialIsVideoOff={initialCallIsVideoOff}
           />
         )}
       </AnimatePresence>

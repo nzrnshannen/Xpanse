@@ -32,6 +32,7 @@ import { Notes } from './Notes';
 import { TaskModal } from './TaskModal';
 import { VideoCallRoom } from './VideoCallRoom';
 import { MeetingMinutesModal } from './MeetingMinutesModal';
+import { PreJoinModal } from './PreJoinModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -150,6 +151,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
 
   // Video Call State
+  const [showPreJoinModal, setShowPreJoinModal] = useState(false);
+  const [initialCallIsMuted, setInitialCallIsMuted] = useState(false);
+  const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
@@ -510,6 +514,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   };
 
   const handleStartVideoCall = () => {
+    setShowPreJoinModal(true);
+  };
+
+  const handleConfirmJoin = (isMuted: boolean, isVideoOff: boolean) => {
+    setShowPreJoinModal(false);
+    setInitialCallIsMuted(isMuted);
+    setInitialCallIsVideoOff(isVideoOff);
     setIsVideoCallActive(true);
     setCallStartTime(Date.now());
     
@@ -2460,12 +2471,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         )}
       </AnimatePresence>
 
+      {/* Pre-Join Modal */}
+      <AnimatePresence>
+        {showPreJoinModal && (
+          <PreJoinModal 
+            onClose={() => setShowPreJoinModal(false)}
+            onJoin={handleConfirmJoin}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Video Call Room */}
       <AnimatePresence>
         {isVideoCallActive && activeChannel && (
           <VideoCallRoom 
             roomId={activeChannel.id} 
             onEndCall={handleEndVideoCall} 
+            initialIsMuted={initialCallIsMuted}
+            initialIsVideoOff={initialCallIsVideoOff}
           />
         )}
       </AnimatePresence>

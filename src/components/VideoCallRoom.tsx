@@ -5,11 +5,13 @@ import { motion } from 'framer-motion';
 interface VideoCallRoomProps {
   roomId: string;
   onEndCall: () => void;
+  initialIsMuted?: boolean;
+  initialIsVideoOff?: boolean;
 }
 
-export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
+export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVideoOff = false }: VideoCallRoomProps) {
+  const [isMuted, setIsMuted] = useState(initialIsMuted);
+  const [isVideoOff, setIsVideoOff] = useState(initialIsVideoOff);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);

@@ -14,6 +14,36 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    const startAudio = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        audioStreamRef.current = stream;
+      } catch (err) {
+        console.error("Error accessing audio device.", err);
+        setIsMuted(true);
+      }
+    };
+
+    const stopAudio = () => {
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+        audioStreamRef.current = null;
+      }
+    };
+
+    if (!isMuted) {
+      startAudio();
+    } else {
+      stopAudio();
+    }
+
+    return () => {
+      stopAudio();
+    };
+  }, [isMuted]);
 
   useEffect(() => {
     const startVideo = async () => {

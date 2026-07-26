@@ -1095,7 +1095,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               <div className="px-4 pb-4 border-b border-white/[0.04] flex justify-between items-start">
                 <div>
                   <h3 className="text-xs font-bold text-white tracking-wide truncate flex items-center gap-1.5">
-                    {activeSpace?.icon && <span>{activeSpace?.icon}</span>}
+                    {activeSpace?.icon && (
+                      activeSpace.icon.startsWith('data:image') 
+                        ? <img src={activeSpace.icon} alt="Space Icon" className="w-4 h-4 rounded object-cover" />
+                        : <span>{activeSpace.icon}</span>
+                    )}
                     {activeSpace?.name}
                   </h3>
                   <div className="flex items-center gap-1.5 mt-1.5">

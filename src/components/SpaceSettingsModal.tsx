@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Settings2, Users, ShieldAlert, KeyRound, Save, 
-  UserMinus, Check, Image as ImageIcon, Palette
+  UserMinus, Check, Image as ImageIcon, Palette, Upload
 } from 'lucide-react';
 import type { SpaceMember } from './Dashboard';
 
@@ -37,9 +37,11 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'collaborators' | 'ownership'>('profile');
   
   // Profile State
+  const isInitialImage = spaceIcon?.startsWith('data:image');
+  const [profileMode, setProfileMode] = useState<'color' | 'image'>(isInitialImage ? 'image' : 'color');
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState(spaceColor);
-  const [icon, setIcon] = useState(spaceIcon);
+  const [profileImage, setProfileImage] = useState(isInitialImage ? spaceIcon : '');
   const [showToast, setShowToast] = useState('');
 
   // Collaborator State
@@ -59,8 +61,21 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
     setTimeout(() => setShowToast(''), 4000);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveProfile = () => {
-    const updates: any = { color, icon };
+    const finalIcon = profileMode === 'image' ? profileImage : '';
+    const finalColor = profileMode === 'color' ? color : '';
+    const updates: any = { color: finalColor, icon: finalIcon };
     if (name !== initialName) {
       updates.name = name;
       triggerToast('Email notifications dispatched to all members regarding Space Name change.');
@@ -151,33 +166,64 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
                   <p className="text-[10px] text-neutral-500 mt-1">Changing the name will notify all members via email.</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-2">Theme Color</label>
-                    <div className="flex items-center gap-2 bg-neutral-900 border border-white/[0.1] rounded-lg px-3 py-2">
-                      <input 
-                        type="color" 
-                        value={color}
-                        onChange={(e) => setColor(e.target.value)}
-                        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
-                      />
-                      <span className="text-xs text-neutral-300 font-mono">{color}</span>
-                    </div>
+                <div className="space-y-4">
+                  <div className="flex gap-4 border-b border-white/[0.05] pb-2">
+                    <button 
+                      onClick={() => setProfileMode('color')}
+                      className={`text-xs font-semibold pb-1 ${profileMode === 'color' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-neutral-500'}`}
+                    >
+                      Theme Color
+                    </button>
+                    <button 
+                      onClick={() => setProfileMode('image')}
+                      className={`text-xs font-semibold pb-1 ${profileMode === 'image' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-neutral-500'}`}
+                    >
+                      Profile Picture
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-neutral-400 mb-2">Space Icon (Emoji)</label>
-                    <div className="flex items-center gap-2 bg-neutral-900 border border-white/[0.1] rounded-lg px-3 py-2">
-                      <ImageIcon className="w-4 h-4 text-neutral-500" />
-                      <input 
-                        type="text" 
-                        value={icon}
-                        onChange={(e) => setIcon(e.target.value)}
-                        placeholder="🚀"
-                        maxLength={2}
-                        className="w-full bg-transparent border-none text-sm text-white focus:outline-none"
-                      />
+
+                  {profileMode === 'color' ? (
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-400 mb-2">Theme Color</label>
+                      <div className="flex items-center gap-2 bg-neutral-900 border border-white/[0.1] rounded-lg px-3 py-2">
+                        <input 
+                          type="color" 
+                          value={color}
+                          onChange={(e) => setColor(e.target.value)}
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+                        />
+                        <span className="text-xs text-neutral-300 font-mono">{color}</span>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-400 mb-2">Upload Profile Picture</label>
+                      <div className="flex items-center gap-4">
+                        {profileImage ? (
+                          <img src={profileImage} alt="Profile preview" className="w-12 h-12 rounded object-cover border border-white/[0.1]" />
+                        ) : (
+                          <div className="w-12 h-12 rounded bg-neutral-900 border border-white/[0.1] flex items-center justify-center">
+                            <ImageIcon className="w-5 h-5 text-neutral-600" />
+                          </div>
+                        )}
+                        <label className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 border border-white/[0.1] rounded-lg text-xs font-medium text-white cursor-pointer transition-colors">
+                          <Upload className="w-4 h-4" />
+                          Choose Image
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            className="hidden" 
+                            onChange={handleImageUpload}
+                          />
+                        </label>
+                        {profileImage && (
+                          <button onClick={() => setProfileImage('')} className="text-xs text-red-400 hover:text-red-300">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4">

@@ -4,7 +4,7 @@ import {
   X, Settings2, Users, ShieldAlert, KeyRound, Save, 
   UserMinus, Check, Image as ImageIcon, Palette
 } from 'lucide-react';
-import { SpaceMember } from './Dashboard';
+import type { SpaceMember } from './Dashboard';
 
 interface SpaceSettingsModalProps {
   spaceId: number;

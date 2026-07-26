@@ -28,8 +28,10 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationFrameRef = useRef<number>();
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     // Enumerate devices
     const getDevices = async () => {
       try {
@@ -57,6 +59,7 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
     getDevices();
     
     return () => {
+      mountedRef.current = false;
       stopMediaTracks();
     };
   }, []);
@@ -89,6 +92,14 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      if (!mountedRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      
+      // Stop any existing stream that might have been set while we were waiting
+      stopMediaTracks();
       streamRef.current = stream;
 
       if (videoRef.current && !isVideoOff) {

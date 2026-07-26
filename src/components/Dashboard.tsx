@@ -170,7 +170,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [initialCallIsMuted, setInitialCallIsMuted] = useState(false);
   const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
-  const [showPreJoinModal, setShowPreJoinModal] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [activeCallMessageId, setActiveCallMessageId] = useState<string | null>(null);
@@ -604,8 +603,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   if (m.type === 'call_started' && m.callData?.status === 'active') {
                     return {
                       ...m,
-                      callData: { ...m.callData, status: 'ended' }
-                    };
+                      callData: { ...m.callData, status: 'ended' as const }
+                    } as Message;
                   }
                   return m;
                 });

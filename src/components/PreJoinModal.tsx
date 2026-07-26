@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff, Settings, X, Upload, Volume2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface PreJoinModalProps {
   onJoin: (isMuted: boolean, isVideoOff: boolean) => void;
@@ -27,7 +27,7 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number>(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {

@@ -46,7 +46,7 @@ export const Notes: React.FC = () => {
   const [activeChapterId, setActiveChapterId] = useState<string | null>('c1');
   
   // Mock Role ('owner', 'editor', 'viewer')
-  const [userRole, setUserRole] = useState<'owner' | 'editor' | 'viewer'>('owner');
+  const [userRole] = useState<'owner' | 'editor' | 'viewer'>('owner');
   
   // Modal states
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -64,7 +64,7 @@ export const Notes: React.FC = () => {
   
   // Undo state for tabs
   const [undoData, setUndoData] = useState<{ chapter: Chapter, noteId: string } | null>(null);
-  const undoTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const undoTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeNote = notes.find(n => n.id === activeNoteId);
   const activeChapter = activeNote?.chapters.find(c => c.id === activeChapterId) || activeNote?.chapters[0];
@@ -173,7 +173,7 @@ export const Notes: React.FC = () => {
     }
 
     // Set up Undo Toast
-    setUndoData({ chapter: chapterToDelete, noteId: activeNoteId });
+    setUndoData({ chapter: chapterToDelete, noteId: activeNoteId as string });
     if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
     undoTimeoutRef.current = setTimeout(() => {
       setUndoData(null);

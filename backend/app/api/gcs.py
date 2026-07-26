@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
 from sqlmodel import Session
-from app.core.database import get_session
+from app.database import get_session
 
 router = APIRouter(prefix="/gcs", tags=["Real-time Chat & WebSockets"])
 
@@ -97,7 +97,7 @@ async def websocket_chat_endpoint(websocket: WebSocket, room_id: int) -> None:
     
     # Broadcast join event
     await manager.broadcast(
-        f"{\"event\": \"join\", \"room_id\": {room_id}, \"message\": \"A user has joined the channel\"}", 
+        f'{{"event": "join", "room_id": {room_id}, "message": "A user has joined the channel"}}', 
         room_id
     )
     
@@ -108,13 +108,13 @@ async def websocket_chat_endpoint(websocket: WebSocket, room_id: int) -> None:
             
             # Broadcast the received message to all channel subscribers
             await manager.broadcast(
-                f"{\"event\": \"message\", \"room_id\": {room_id}, \"message\": {repr(data)}}", 
+                f'{{"event": "message", "room_id": {room_id}, "message": {repr(data)}}}',
                 room_id
             )
             
     except WebSocketDisconnect:
         manager.disconnect(websocket, room_id)
         await manager.broadcast(
-            f"{\"event\": \"leave\", \"room_id\": {room_id}, \"message\": \"A user has left the channel\"}", 
+            f'{{"event": "leave", "room_id": {room_id}, "message": "A user has left the channel"}}',
             room_id
         )

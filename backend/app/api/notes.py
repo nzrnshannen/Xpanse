@@ -2,7 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlmodel import Session, select
-from app.core.database import get_session
+from app.database import get_session
 from app.models.domain import User, Space, Note, NoteChapter
 from app.models.bridges import SpaceMemberLink, NoteCollaboratorLink
 

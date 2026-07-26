@@ -2,12 +2,7 @@ import React from 'react';
 import { ArrowDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-interface HeroProps {
-  onGetStartedClick: () => void;
-  onJoinInviteClick: () => void;
-}
-
-export const Hero: React.FC<HeroProps> = ({ onGetStartedClick, onJoinInviteClick }) => {
+export const Hero: React.FC = () => {
   return (
     <section className="relative overflow-hidden pt-12 pb-16 md:pt-16 md:pb-24">
       {/* Decorative Grid & Glow Mesh backgrounds */}

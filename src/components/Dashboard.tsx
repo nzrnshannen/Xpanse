@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -25,7 +25,8 @@ import {
   CheckSquare,
   Video,
   Calendar,
-  PhoneOff
+  PhoneOff,
+  Settings2
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -33,6 +34,7 @@ import { TaskModal } from './TaskModal';
 import { VideoCallRoom } from './VideoCallRoom';
 import { MeetingMinutesModal } from './MeetingMinutesModal';
 import { PreJoinModal } from './PreJoinModal';
+import { SpaceSettingsModal } from './SpaceSettingsModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -94,9 +96,21 @@ interface FeedItem {
   time: string;
 }
 
+export interface SpaceMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'edit-only' | 'post-only' | 'view-only';
+  status: 'active' | 'invited';
+}
+
 interface MockSpace {
   id: number;
   name: string;
+  color?: string;
+  icon?: string;
+  ownerId?: string;
+  members?: SpaceMember[];
   boards: MockBoard[];
   channels: MockChannel[];
   feed: FeedItem[];
@@ -156,9 +170,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [initialCallIsMuted, setInitialCallIsMuted] = useState(false);
   const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [showPreJoinModal, setShowPreJoinModal] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [activeCallMessageId, setActiveCallMessageId] = useState<string | null>(null);
+  const [showSpaceSettingsModal, setShowSpaceSettingsModal] = useState(false);
 
   // Sort State
   type SortOption = 'alpha_az' | 'alpha_za' | 'date_newest' | 'date_oldest';
@@ -225,6 +241,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     const initialSpace: MockSpace = {
       id: Date.now(),
       name: newSpaceName,
+      color: '#3b82f6',
+      icon: '🚀',
+      ownerId: userEmail,
+      members: [
+        { id: 'm1', name: 'You', email: userEmail, role: 'admin', status: 'active' }
+      ],
       boards: [
         {
           id: 'b1',
@@ -304,6 +326,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     const joinedSpace: MockSpace = {
       id: Date.now(),
       name: 'Shared Contractor Space',
+      color: '#10b981',
+      icon: '🤝',
+      ownerId: 'owner@xpanse.app',
+      members: [
+        { id: 'm1', name: 'Owner', email: 'owner@xpanse.app', role: 'admin', status: 'active' },
+        { id: 'm2', name: 'You', email: userEmail, role: 'edit-only', status: 'active' }
+      ],
       boards: [
         {
           id: 'bj1',
@@ -1203,12 +1232,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               className="flex-1 flex flex-col py-4"
             >
               {/* Space profile banner */}
-              <div className="px-4 pb-4 border-b border-white/[0.04]">
-                <h3 className="text-xs font-bold text-white tracking-wide truncate">{activeSpace?.name}</h3>
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[9px] text-neutral-500 font-semibold uppercase tracking-wider">Workspace active</span>
+              <div className="px-4 pb-4 border-b border-white/[0.04] flex justify-between items-start">
+                <div>
+                  <h3 className="text-xs font-bold text-white tracking-wide truncate flex items-center gap-1.5">
+                    {activeSpace?.icon && (
+                      activeSpace.icon.startsWith('data:image') 
+                        ? <img src={activeSpace.icon} alt="Space Icon" className="w-4 h-4 rounded object-cover" />
+                        : <span>{activeSpace.icon}</span>
+                    )}
+                    {activeSpace?.name}
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: activeSpace?.color || '#10b981' }} />
+                    <span className="text-[9px] text-neutral-500 font-semibold uppercase tracking-wider">Workspace active</span>
+                  </div>
                 </div>
+                <button 
+                  onClick={() => setShowSpaceSettingsModal(true)}
+                  className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.05] transition-colors"
+                >
+                  <Settings2 className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Navigation List */}
@@ -2529,6 +2573,58 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
               <X className="w-4 h-4" />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Space Settings Modal */}
+      <AnimatePresence>
+        {showSpaceSettingsModal && activeSpace && (
+          <SpaceSettingsModal 
+            spaceId={activeSpace.id}
+            spaceName={activeSpace.name}
+            spaceColor={activeSpace.color}
+            spaceIcon={activeSpace.icon}
+            ownerId={activeSpace.ownerId}
+            members={activeSpace.members || []}
+            currentUserEmail={userEmail}
+            onClose={() => setShowSpaceSettingsModal(false)}
+            onUpdateSpace={(updates) => {
+              setSpaces(prev => prev.map(s => s.id === activeSpace.id ? { ...s, ...updates } : s));
+            }}
+            onUpdateMemberRole={(memberId, role) => {
+              setSpaces(prev => prev.map(s => {
+                if (s.id !== activeSpace.id) return s;
+                return {
+                  ...s,
+                  members: s.members?.map(m => m.id === memberId ? { ...m, role } : m)
+                };
+              }));
+            }}
+            onRemoveMember={(memberId) => {
+              setSpaces(prev => prev.map(s => {
+                if (s.id !== activeSpace.id) return s;
+                return {
+                  ...s,
+                  members: s.members?.filter(m => m.id !== memberId)
+                };
+              }));
+            }}
+            onTransferOwnership={(newOwnerId) => {
+              setSpaces(prev => prev.map(s => {
+                if (s.id !== activeSpace.id) return s;
+                const newOwner = s.members?.find(m => m.id === newOwnerId);
+                return {
+                  ...s,
+                  ownerId: newOwner?.email,
+                  members: s.members?.map(m => {
+                    if (m.id === newOwnerId) return { ...m, role: 'admin' };
+                    if (m.email === s.ownerId) return { ...m, role: 'edit-only' }; // Demote old owner
+                    return m;
+                  })
+                };
+              }));
+            }}
+          />
         )}
       </AnimatePresence>
 

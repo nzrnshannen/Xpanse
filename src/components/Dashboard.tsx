@@ -24,7 +24,8 @@ import {
   Filter,
   CheckSquare,
   Video,
-  Calendar
+  Calendar,
+  PhoneOff
 } from 'lucide-react';
 
 import { Notes } from './Notes';

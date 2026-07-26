@@ -155,7 +155,7 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
                       autoPlay 
                       playsInline 
                       muted 
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover -scale-x-100"
                     />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center">
@@ -184,7 +184,7 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
                     autoPlay 
                     playsInline 
                     muted 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover -scale-x-100"
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">

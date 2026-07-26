@@ -15,7 +15,7 @@ export function PreJoinModal({ onJoin, onCancel }: PreJoinModalProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
 
   useEffect(() => {
     const getDevices = async () => {

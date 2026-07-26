@@ -555,7 +555,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   const handleEndVideoCall = (endForAll = true) => {
     setIsVideoCallActive(false);
-    setShowMeetingMinutesModal(true);
+    
+    if (endForAll) {
+      setShowMeetingMinutesModal(true);
+    }
     
     if (endForAll && activeCallMessageId) {
       const endTime = Date.now();

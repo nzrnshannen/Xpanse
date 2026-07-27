@@ -154,7 +154,6 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   };
 
   const getBackgroundStyles = () => {
-    if (backgroundEffect === 'blur') return { backdropFilter: 'blur(10px)' };
     if (backgroundEffect === 'preset1') return { backgroundImage: 'url(https://images.unsplash.com/photo-1557683316-973673baf926?w=800&q=80)', backgroundSize: 'cover' };
     if (backgroundEffect === 'preset2') return { backgroundImage: 'url(https://images.unsplash.com/photo-1557682250-33bd709cbe85?w=800&q=80)', backgroundSize: 'cover' };
     if (backgroundEffect === 'custom' && customBgImage) return { backgroundImage: `url(${customBgImage})`, backgroundSize: 'cover' };
@@ -176,17 +175,23 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
             {/* Background Effect Layer */}
             <div className="absolute inset-0 z-0 transition-all duration-300" style={getBackgroundStyles()} />
             
-            {!isVideoOff ? (
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                className={`w-full h-full object-cover -scale-x-100 relative z-10 ${backgroundEffect === 'blur' ? 'backdrop-blur-xl bg-white/10' : ''}`}
-                style={backgroundEffect !== 'none' && backgroundEffect !== 'blur' ? { mixBlendMode: 'screen', opacity: 0.8 } : {}}
-              />
-            ) : (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-neutral-900">
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              muted 
+              className={`w-full h-full object-cover -scale-x-100 relative z-10 ${isVideoOff ? 'hidden' : 'block'}`}
+              style={backgroundEffect !== 'none' && backgroundEffect !== 'blur' ? { mixBlendMode: 'screen', opacity: 0.8 } : {}}
+            />
+
+            {/* Blur Overlay Layer */}
+            {backgroundEffect === 'blur' && !isVideoOff && (
+              <div className="absolute inset-0 z-20 backdrop-blur-xl bg-white/5 pointer-events-none" />
+            )}
+            
+            {/* Video Off Placeholder */}
+            {isVideoOff && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-neutral-900">
                 <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-500">
                   <VideoOff className="w-8 h-8" />
                 </div>

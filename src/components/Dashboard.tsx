@@ -72,12 +72,19 @@ interface Message {
   sender: string;
   text: string;
   time: string;
-  type?: 'text' | 'call_started' | 'call_ended';
+  type?: 'text' | 'call_started' | 'call_ended' | 'meeting_minutes';
   callData?: {
     duration?: string;
     participantCount?: number;
     startedBy?: string;
     status?: 'active' | 'ended';
+  };
+  minutesData?: {
+    summary: string;
+    decisions: string[];
+    actionItems: { id: number; title: string; assignee: string }[];
+    date: string;
+    attendeeCount: number;
   };
 }
 
@@ -171,6 +178,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
+  const [activeMinutesData, setActiveMinutesData] = useState<any>(null);
+  const [isGeneratingMinutes, setIsGeneratingMinutes] = useState(false);
+  const [generationSuccess, setGenerationSuccess] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [activeCallMessageId, setActiveCallMessageId] = useState<string | null>(null);
   const [showSpaceSettingsModal, setShowSpaceSettingsModal] = useState(false);
@@ -584,10 +594,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const handleEndVideoCall = (endForAll = true) => {
     setIsVideoCallActive(false);
     
-    if (endForAll) {
-      setShowMeetingMinutesModal(true);
-    }
-    
     if (endForAll && activeCallMessageId) {
       const endTime = Date.now();
       const durationMs = callStartTime ? endTime - callStartTime : 0;
@@ -630,10 +636,96 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         }
         return s;
       }));
+
+      // Generate MOM System Card after delay
+      setIsGeneratingMinutes(true);
+      setTimeout(() => {
+        setIsGeneratingMinutes(false);
+        setGenerationSuccess(true);
+        setTimeout(() => setGenerationSuccess(false), 2000);
+
+        const momMessageId = Math.random().toString(36).substr(2, 9);
+        const momTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        const generatedMinutes = {
+          summary: "The team discussed the upcoming Q3 product launch. Key focus areas were stabilizing the new WebSocket architecture and finalizing the real-time AI Minutes feature. Everyone agreed on the release timeline for next Friday.",
+          decisions: [
+            "We will prioritize the WebRTC feature over the new themes.",
+            "The release candidate will be deployed to staging by Tuesday.",
+            "Marketing will hold off on the newsletter until the final QA sign-off."
+          ],
+          actionItems: [
+            { id: 1, title: "Implement WebRTC signaling endpoints", assignee: "Sarah Connor" },
+            { id: 2, title: "Write end-to-end tests for MoM extraction", assignee: "John Doe" },
+            { id: 3, title: "Draft release notes for Q3 update", assignee: "Unassigned" }
+          ],
+          date: new Date().toLocaleDateString(),
+          attendeeCount: 3
+        };
+
+        setSpaces(prev => prev.map(s => {
+          if (s.id === activeSpaceId) {
+            return {
+              ...s,
+              channels: s.channels.map(c => {
+                if (c.id === activeChannelId) {
+                  return {
+                    ...c,
+                    messages: [
+                      ...c.messages,
+                      {
+                        id: momMessageId,
+                        type: 'meeting_minutes',
+                        sender: 'Xpanse AI',
+                        text: 'Meeting Minutes Generated',
+                        time: momTime,
+                        minutesData: generatedMinutes
+                      }
+                    ]
+                  };
+                }
+                return c;
+              })
+            };
+          }
+          return s;
+        }));
+      }, 3000);
     }
     
     setCallStartTime(null);
     setActiveCallMessageId(null);
+  };
+
+  const handleViewMinutes = (minutesData: any) => {
+    setActiveMinutesData(minutesData);
+    setShowMeetingMinutesModal(true);
+  };
+
+  const handleDownloadMinutes = (minutesData: any) => {
+    if (!minutesData) return;
+    
+    const content = `# Meeting Minutes - ${minutesData.date}
+    
+## Executive Summary
+${minutesData.summary}
+
+## Key Decisions
+${minutesData.decisions.map((d: string) => `- ${d}`).join('\n')}
+
+## Action Items
+${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assignee})`).join('\n')}
+`;
+
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Meeting_Minutes_${minutesData.date.replace(/\//g, '-')}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // 5. Action Handler: Send Message
@@ -1976,7 +2068,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   {/* Messages container */}
                   <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 pr-4">
                     {activeChannel.messages.map((msg, idx) => (
-                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'call_ended' ? 'justify-center my-4' : 'gap-3 text-xs items-start max-w-2xl'}`}>
+                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'call_ended' || msg.type === 'meeting_minutes' ? 'justify-center my-4' : 'gap-3 text-xs items-start max-w-2xl'}`}>
                         {msg.type === 'call_started' && (
                           <div className="flex flex-col items-center bg-[#070709] border border-white/[0.05] p-4 rounded-2xl shadow-xl w-64 text-center">
                             <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-3 text-purple-400">
@@ -2017,6 +2109,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                                 <span className="text-neutral-500 text-[10px] uppercase">Participants</span>
                                 <span>{msg.callData?.participantCount}</span>
                               </div>
+                            </div>
+                          </div>
+                        )}
+                        {msg.type === 'meeting_minutes' && msg.minutesData && (
+                          <div className="flex flex-col items-center bg-[#070709] border border-purple-500/20 p-4 rounded-2xl shadow-xl w-80 text-center">
+                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-3 text-purple-400">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <span className="font-bold text-white text-sm mb-1">{msg.text}</span>
+                            <span className="text-[10px] text-neutral-500 mb-3">{msg.time} &bull; {msg.minutesData.date} &bull; {msg.minutesData.attendeeCount} Attendees</span>
+                            
+                            <div className="w-full text-left bg-black/20 rounded-lg p-3 mb-4 border border-white/[0.05]">
+                              <p className="text-xs text-neutral-400 line-clamp-3 leading-relaxed">
+                                {msg.minutesData.summary}
+                              </p>
+                            </div>
+                            
+                            <div className="flex w-full gap-2">
+                              <button 
+                                onClick={() => handleViewMinutes(msg.minutesData)}
+                                className="flex-1 py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition-colors"
+                              >
+                                View Minutes
+                              </button>
+                              <button 
+                                onClick={() => handleDownloadMinutes(msg.minutesData)}
+                                className="flex-1 py-2 bg-white/[0.05] hover:bg-white/[0.1] text-neutral-300 font-bold text-xs rounded-xl transition-colors border border-white/[0.1]"
+                              >
+                                Download MD
+                              </button>
                             </div>
                           </div>
                         )}
@@ -2649,12 +2771,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
         )}
       </AnimatePresence>
 
+      {/* AI Generating Minutes Modal */}
+      <AnimatePresence>
+        {isGeneratingMinutes && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <div className="relative w-full max-w-sm rounded-2xl border border-purple-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center">
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-purple-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                <Sparkles className="h-8 w-8 animate-pulse" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Generating Minutes...</h3>
+              <p className="text-sm text-neutral-400 mb-2">Xpanse AI is summarizing your call and extracting action items.</p>
+              
+              <div className="w-full h-1 bg-white/[0.05] rounded-full overflow-hidden mt-4">
+                <motion.div 
+                  className="h-full bg-purple-500"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 3, ease: "linear" }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Generating Minutes Success Modal */}
+      <AnimatePresence>
+        {generationSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <div className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center">
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Minutes Created!</h3>
+              <p className="text-sm text-neutral-400 mb-2">Your meeting minutes have been successfully generated.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Meeting Minutes Modal */}
       <AnimatePresence>
         {showMeetingMinutesModal && (
           <MeetingMinutesModal 
-            onClose={() => setShowMeetingMinutesModal(false)}
+            onClose={() => {
+              setShowMeetingMinutesModal(false);
+              setActiveMinutesData(null);
+            }}
             onConvertToTask={handleConvertToTask}
+            minutesData={activeMinutesData}
           />
         )}
       </AnimatePresence>

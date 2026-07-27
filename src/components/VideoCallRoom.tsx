@@ -16,16 +16,25 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
+    let isActive = true;
+
     const startVideo = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (!isActive) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(e => console.log("Play failed", e));
         }
       } catch (err) {
-        console.error("Error accessing media devices.", err);
-        setIsVideoOff(true);
+        if (isActive) {
+          console.error("Error accessing media devices.", err);
+          setIsVideoOff(true);
+        }
       }
     };
 
@@ -46,6 +55,7 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
     }
 
     return () => {
+      isActive = false;
       stopVideo();
     };
   }, [isVideoOff]);
@@ -79,15 +89,16 @@ export function VideoCallRoom({ onEndCall }: VideoCallRoomProps) {
       <div className="flex-1 p-4 grid grid-cols-2 gap-4 auto-rows-fr">
         {participants.map(p => (
           <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center">
-            {p.isMe && !isVideoOff ? (
+            {p.isMe && (
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover scale-x-[-1]"
+                className={`w-full h-full object-cover scale-x-[-1] ${isVideoOff ? 'hidden' : 'block'}`}
               />
-            ) : (
+            )}
+            {(!p.isMe || isVideoOff) && (
               <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center text-2xl font-bold text-neutral-400">
                 {p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
               </div>

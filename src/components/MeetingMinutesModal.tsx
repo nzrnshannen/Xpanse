@@ -5,14 +5,19 @@ import { FileText, Loader2, Plus, CheckCircle2 } from 'lucide-react';
 interface MeetingMinutesModalProps {
   onClose: () => void;
   onConvertToTask: (title: string, assignee: string) => void;
+  minutesData?: {
+    summary: string;
+    decisions: string[];
+    actionItems: { id: number; title: string; assignee: string }[];
+  };
 }
 
-export function MeetingMinutesModal({ onClose, onConvertToTask }: MeetingMinutesModalProps) {
-  const [isLoading, setIsLoading] = useState(true);
+export function MeetingMinutesModal({ onClose, onConvertToTask, minutesData }: MeetingMinutesModalProps) {
+  const [isLoading, setIsLoading] = useState(!minutesData);
   const [convertedItems, setConvertedItems] = useState<Set<number>>(new Set());
 
   // Mock AI MoM data
-  const mockMoM = {
+  const mockMoM = minutesData || {
     summary: "The team discussed the upcoming Q3 product launch. Key focus areas were stabilizing the new WebSocket architecture and finalizing the real-time AI Minutes feature. Everyone agreed on the release timeline for next Friday.",
     decisions: [
       "We will prioritize the WebRTC feature over the new themes.",
@@ -27,12 +32,13 @@ export function MeetingMinutesModal({ onClose, onConvertToTask }: MeetingMinutes
   };
 
   useEffect(() => {
+    if (minutesData) return;
     // Simulate AI generation delay
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [minutesData]);
 
   const handleConvert = (id: number, title: string, assignee: string) => {
     onConvertToTask(title, assignee);

@@ -42,6 +42,7 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
           localStreamRef.current = stream;
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
+            localVideoRef.current.play().catch(e => console.log("Play failed", e));
           }
         } else {
           // Clean up if unmounted before stream resolves
@@ -167,15 +168,16 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
             <div className="w-64 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
               {participants.map(p => (
                 <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center aspect-video flex-shrink-0 shadow-lg">
-                  {p.isMe && !isVideoOff ? (
+                  {p.isMe && (
                     <video 
                       ref={localVideoRef}
                       autoPlay 
                       playsInline 
                       muted 
-                      className="w-full h-full object-cover -scale-x-100"
+                      className={`w-full h-full object-cover -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
                     />
-                  ) : (
+                  )}
+                  {(!p.isMe || isVideoOff) && (
                     <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center">
                       <User className="w-5 h-5 text-neutral-500" />
                     </div>
@@ -196,15 +198,16 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
           <div className="flex-1 grid grid-cols-2 gap-4 auto-rows-fr">
             {participants.map(p => (
               <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center shadow-lg">
-                {p.isMe && !isVideoOff ? (
+                {p.isMe && (
                   <video 
                     ref={localVideoRef}
                     autoPlay 
                     playsInline 
                     muted 
-                    className="w-full h-full object-cover -scale-x-100"
+                    className={`w-full h-full object-cover -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
                   />
-                ) : (
+                )}
+                {(!p.isMe || isVideoOff) && (
                   <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">
                     <User className="w-8 h-8 text-neutral-500" />
                   </div>

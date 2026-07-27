@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff, Settings, X, Upload, Volume2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { SelfieSegmentation, Results } from '@mediapipe/selfie_segmentation';
-import { Camera } from '@mediapipe/camera_utils';
+
+// Using any for Results since we don't have the type imported anymore
+type Results = any;
 
 interface PreJoinModalProps {
   onJoin: (isMuted: boolean, isVideoOff: boolean) => void;
@@ -126,8 +127,16 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   };
 
   useEffect(() => {
+    const SelfieSegmentation = (window as any).SelfieSegmentation;
+    const Camera = (window as any).Camera;
+
+    if (!SelfieSegmentation || !Camera) {
+      console.error("MediaPipe libraries not loaded from CDN yet.");
+      return;
+    }
+
     selfieSegmentationRef.current = new SelfieSegmentation({
-      locateFile: (file) => {
+      locateFile: (file: string) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
       }
     });
@@ -220,19 +229,22 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
         videoRef.current.srcObject = stream;
         
         if (selfieSegmentationRef.current) {
+          const Camera = (window as any).Camera;
           if (cameraRef.current) {
             cameraRef.current.stop();
           }
-          cameraRef.current = new Camera(videoRef.current, {
-            onFrame: async () => {
-              if (videoRef.current && selfieSegmentationRef.current) {
-                await selfieSegmentationRef.current.send({image: videoRef.current});
-              }
-            },
-            width: 640,
-            height: 480
-          });
-          cameraRef.current.start();
+          if (Camera) {
+            cameraRef.current = new Camera(videoRef.current, {
+              onFrame: async () => {
+                if (videoRef.current && selfieSegmentationRef.current) {
+                  await selfieSegmentationRef.current.send({image: videoRef.current});
+                }
+              },
+              width: 640,
+              height: 480
+            });
+            cameraRef.current.start();
+          }
         }
       } else if (isVideoOff && cameraRef.current) {
          cameraRef.current.stop();

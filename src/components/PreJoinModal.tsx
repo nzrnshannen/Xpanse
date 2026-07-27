@@ -34,8 +34,9 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   const animationFrameRef = useRef<number>(0);
   const mountedRef = useRef(true);
   
-  const selfieSegmentationRef = useRef<SelfieSegmentation | null>(null);
-  const cameraRef = useRef<Camera | null>(null);
+  const selfieSegmentationRef = useRef<any>(null);
+  const videoFrameRef = useRef<number>(0);
+  const isVideoProcessingRef = useRef(false);
   
   const bgEffectRef = useRef(backgroundEffect);
   const customBgRef = useRef(customBgImage);
@@ -127,15 +128,14 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   };
 
   useEffect(() => {
-    const SelfieSegmentation = (window as any).SelfieSegmentation;
-    const Camera = (window as any).Camera;
+    const windowSelfie = (window as any).SelfieSegmentation;
 
-    if (!SelfieSegmentation || !Camera) {
-      console.error("MediaPipe libraries not loaded from CDN yet.");
+    if (!windowSelfie) {
+      console.error("MediaPipe SelfieSegmentation not loaded from CDN yet.");
       return;
     }
 
-    selfieSegmentationRef.current = new SelfieSegmentation({
+    selfieSegmentationRef.current = new windowSelfie({
       locateFile: (file: string) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`;
       }
@@ -151,9 +151,10 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
       if (selfieSegmentationRef.current) {
         selfieSegmentationRef.current.close();
       }
-      if (cameraRef.current) {
-        cameraRef.current.stop();
+      if (videoFrameRef.current) {
+        cancelAnimationFrame(videoFrameRef.current);
       }
+      isVideoProcessingRef.current = false;
     }
   }, []);
 
@@ -195,13 +196,25 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
 
   const stopMediaTracks = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    isVideoProcessingRef.current = false;
+    if (videoFrameRef.current) {
+      cancelAnimationFrame(videoFrameRef.current);
     }
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
     }
     if (audioContextRef.current) {
-      audioContextRef.current.close();
+      if (audioContextRef.current.state !== 'closed') {
+        audioContextRef.current.close();
+      }
       audioContextRef.current = null;
     }
   };
@@ -228,26 +241,36 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
       if (videoRef.current && !isVideoOff) {
         videoRef.current.srcObject = stream;
         
+        // Start manual frame processing loop for MediaPipe
         if (selfieSegmentationRef.current) {
-          const Camera = (window as any).Camera;
-          if (cameraRef.current) {
-            cameraRef.current.stop();
-          }
-          if (Camera) {
-            cameraRef.current = new Camera(videoRef.current, {
-              onFrame: async () => {
-                if (videoRef.current && selfieSegmentationRef.current) {
-                  await selfieSegmentationRef.current.send({image: videoRef.current});
-                }
-              },
-              width: 640,
-              height: 480
-            });
-            cameraRef.current.start();
-          }
+          isVideoProcessingRef.current = true;
+          
+          const processFrame = async () => {
+            if (!isVideoProcessingRef.current || !videoRef.current || !selfieSegmentationRef.current) return;
+            
+            try {
+              if (videoRef.current.readyState >= 2) {
+                await selfieSegmentationRef.current.send({ image: videoRef.current });
+              }
+            } catch (err) {
+              console.error("Error processing video frame", err);
+            }
+            
+            if (isVideoProcessingRef.current) {
+              if ('requestVideoFrameCallback' in videoRef.current) {
+                (videoRef.current as any).requestVideoFrameCallback(processFrame);
+              } else {
+                videoFrameRef.current = requestAnimationFrame(processFrame);
+              }
+            }
+          };
+          
+          videoRef.current.onloadeddata = () => {
+            processFrame();
+          };
         }
-      } else if (isVideoOff && cameraRef.current) {
-         cameraRef.current.stop();
+      } else if (isVideoOff) {
+        isVideoProcessingRef.current = false;
       }
 
       if (!isMuted && stream.getAudioTracks().length > 0) {

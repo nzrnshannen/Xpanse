@@ -179,6 +179,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
   const [activeMinutesData, setActiveMinutesData] = useState<any>(null);
+  const [isGeneratingMinutes, setIsGeneratingMinutes] = useState(false);
+  const [generationSuccess, setGenerationSuccess] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
   const [activeCallMessageId, setActiveCallMessageId] = useState<string | null>(null);
   const [showSpaceSettingsModal, setShowSpaceSettingsModal] = useState(false);
@@ -636,7 +638,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
       }));
 
       // Generate MOM System Card after delay
+      setIsGeneratingMinutes(true);
       setTimeout(() => {
+        setIsGeneratingMinutes(false);
+        setGenerationSuccess(true);
+        setTimeout(() => setGenerationSuccess(false), 2000);
+
         const momMessageId = Math.random().toString(36).substr(2, 9);
         const momTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
@@ -2061,7 +2068,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   {/* Messages container */}
                   <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 pr-4">
                     {activeChannel.messages.map((msg, idx) => (
-                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'call_ended' ? 'justify-center my-4' : 'gap-3 text-xs items-start max-w-2xl'}`}>
+                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'call_ended' || msg.type === 'meeting_minutes' ? 'justify-center my-4' : 'gap-3 text-xs items-start max-w-2xl'}`}>
                         {msg.type === 'call_started' && (
                           <div className="flex flex-col items-center bg-[#070709] border border-white/[0.05] p-4 rounded-2xl shadow-xl w-64 text-center">
                             <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-3 text-purple-400">
@@ -2761,6 +2768,57 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
             initialIsMuted={initialCallIsMuted}
             initialIsVideoOff={initialCallIsVideoOff}
           />
+        )}
+      </AnimatePresence>
+
+      {/* AI Generating Minutes Modal */}
+      <AnimatePresence>
+        {isGeneratingMinutes && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <div className="relative w-full max-w-sm rounded-2xl border border-purple-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center">
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-purple-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                <Sparkles className="h-8 w-8 animate-pulse" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Generating Minutes...</h3>
+              <p className="text-sm text-neutral-400 mb-2">Xpanse AI is summarizing your call and extracting action items.</p>
+              
+              <div className="w-full h-1 bg-white/[0.05] rounded-full overflow-hidden mt-4">
+                <motion.div 
+                  className="h-full bg-purple-500"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 3, ease: "linear" }}
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI Generating Minutes Success Modal */}
+      <AnimatePresence>
+        {generationSuccess && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          >
+            <div className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center">
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Minutes Created!</h3>
+              <p className="text-sm text-neutral-400 mb-2">Your meeting minutes have been successfully generated.</p>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

@@ -4,6 +4,8 @@ import { Hero } from './components/Hero';
 import { FeatureGrid } from './components/FeatureGrid';
 import { AuthModal } from './components/AuthModal';
 import { Dashboard } from './components/Dashboard';
+import { DevNoticeModal } from './components/DevNoticeModal';
+
 const App: React.FC = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
@@ -26,6 +28,9 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] text-neutral-100 flex flex-col justify-between selection:bg-purple-500/30 selection:text-white">
+      {/* Development Notice Overlay */}
+      <DevNoticeModal />
+
       {/* Navigation Header */}
       <Navbar 
         onLoginClick={() => openAuth('login')} 

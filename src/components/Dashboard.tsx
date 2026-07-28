@@ -137,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   // Modal control states
-  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | 'task_preview' | null>(null);
+  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | 'task_preview' | 'logout' | null>(null);
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -1278,7 +1278,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
           </div>
 
           <button
-            onClick={onLogout}
+            onClick={() => setActiveActionModal('logout')}
             className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
             title="Log Out"
           >
@@ -2833,6 +2833,49 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
             onConvertToTask={handleConvertToTask}
             minutesData={activeMinutesData}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Logout Modal */}
+      <AnimatePresence>
+        {activeActionModal === 'logout' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setActiveActionModal(null)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-2xl border border-red-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col items-center text-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-red-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+                <LogOut className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Are you sure you want to log out?</h3>
+              <p className="text-sm text-neutral-400 mb-6">You will need to sign in again to access your spaces and tasks.</p>
+              
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setActiveActionModal(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] text-white font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveActionModal(null);
+                    onLogout();
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-colors cursor-pointer"
+                >
+                  Log Out
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

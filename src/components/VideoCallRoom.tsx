@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, User } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, MonitorUp, PhoneOff, User, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface VideoCallRoomProps {
@@ -15,6 +15,9 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
   const [isVideoOff, setIsVideoOff] = useState(initialIsVideoOff);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showEndCallModal, setShowEndCallModal] = useState(false);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(9);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -122,12 +125,31 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
     };
   }, []);
   
-  // Mock participants
+  // Mock participants (expanded for testing pagination)
   const participants = [
     { id: 1, name: "You", isMe: true },
     { id: 2, name: "Sarah Connor", isMe: false },
     { id: 3, name: "John Doe", isMe: false },
+    ...Array.from({ length: 25 }).map((_, i) => ({ id: i + 4, name: `User ${i + 4}`, isMe: false })),
   ];
+
+  const totalPages = Math.ceil(participants.length / itemsPerPage);
+  
+  // Ensure currentPage is valid if itemsPerPage changes
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [itemsPerPage, totalPages, currentPage]);
+
+  const activeParticipants = participants.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const getGridColsClass = () => {
+    if (itemsPerPage <= 9) return 'grid-cols-2 md:grid-cols-3';
+    if (itemsPerPage <= 16) return 'grid-cols-3 md:grid-cols-4';
+    if (itemsPerPage <= 25) return 'grid-cols-4 md:grid-cols-5';
+    return 'grid-cols-5 md:grid-cols-7'; // 49
+  };
 
   return (
     <motion.div 
@@ -144,6 +166,21 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
             <span className="text-xs font-semibold text-red-500">Live</span>
           </div>
           <h2 className="text-sm font-bold text-white">Video Call</h2>
+        </div>
+        
+        {/* Layout Selector */}
+        <div className="flex items-center gap-2">
+          <LayoutGrid className="w-4 h-4 text-neutral-400" />
+          <select 
+            value={itemsPerPage}
+            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            className="bg-neutral-900 border border-white/[0.05] text-xs text-white rounded-lg px-2 py-1.5 focus:outline-none focus:border-purple-500 cursor-pointer"
+          >
+            <option value={9}>9 per page</option>
+            <option value={16}>16 per page</option>
+            <option value={25}>25 per page</option>
+            <option value={49}>49 per page</option>
+          </select>
         </div>
       </div>
 
@@ -166,7 +203,7 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
             
             {/* Participants Sidebar */}
             <div className="w-64 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
-              {participants.map(p => (
+              {activeParticipants.map(p => (
                 <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center aspect-video flex-shrink-0 shadow-lg">
                   {p.isMe && (
                     <video 
@@ -182,7 +219,7 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
                       <User className="w-5 h-5 text-neutral-500" />
                     </div>
                   )}
-                  <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-medium text-white">
+                  <div className="absolute bottom-2 left-2 px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-medium text-white truncate max-w-[100px]">
                     {p.name}
                   </div>
                   {(p.isMe && isMuted) && (
@@ -195,36 +232,67 @@ export function VideoCallRoom({ onEndCall, initialIsMuted = false, initialIsVide
             </div>
           </>
         ) : (
-          <div className="flex-1 grid grid-cols-2 gap-4 auto-rows-fr">
-            {participants.map(p => (
-              <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center shadow-lg">
-                {p.isMe && (
-                  <video 
-                    ref={localVideoRef}
-                    autoPlay 
-                    playsInline 
-                    muted 
-                    className={`w-full h-full object-cover -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
-                  />
-                )}
-                {(!p.isMe || isVideoOff) && (
-                  <div className="w-20 h-20 rounded-full bg-neutral-800 flex items-center justify-center">
-                    <User className="w-8 h-8 text-neutral-500" />
+          <div className="flex-1 relative flex items-center justify-center">
+            {/* Pagination Prev */}
+            {totalPages > 1 && (
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all backdrop-blur-md"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            <div className={`w-full h-full grid ${getGridColsClass()} gap-2 md:gap-4 auto-rows-fr`}>
+              {activeParticipants.map(p => (
+                <div key={p.id} className="relative bg-neutral-900 rounded-2xl border border-white/[0.05] overflow-hidden flex items-center justify-center shadow-lg">
+                  {p.isMe && (
+                    <video 
+                      ref={localVideoRef}
+                      autoPlay 
+                      playsInline 
+                      muted 
+                      className={`w-full h-full object-cover -scale-x-100 ${isVideoOff ? 'hidden' : 'block'}`}
+                    />
+                  )}
+                  {(!p.isMe || isVideoOff) && (
+                    <div className="w-12 h-12 md:w-20 md:h-20 rounded-full bg-neutral-800 flex items-center justify-center">
+                      <User className="w-6 h-6 md:w-8 md:h-8 text-neutral-500" />
+                    </div>
+                  )}
+                  
+                  <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 flex items-center gap-2">
+                    <div className="px-2 py-1 md:px-3 md:py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] md:text-xs font-medium text-white truncate max-w-[100px] md:max-w-[150px]">
+                      {p.name}
+                    </div>
                   </div>
-                )}
-                
-                <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                  <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white">
-                    {p.name}
-                  </div>
+                  {(p.isMe && isMuted) && (
+                    <div className="absolute top-2 right-2 md:top-4 md:right-4 p-1.5 md:p-2 rounded-full bg-red-500/20 text-red-500">
+                      <MicOff className="w-3 h-3 md:w-4 md:h-4" />
+                    </div>
+                  )}
                 </div>
-                {(p.isMe && isMuted) && (
-                  <div className="absolute top-4 right-4 p-2 rounded-full bg-red-500/20 text-red-500">
-                    <MicOff className="w-4 h-4" />
-                  </div>
-                )}
+              ))}
+            </div>
+
+            {/* Pagination Next */}
+            {totalPages > 1 && (
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all backdrop-blur-md"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Pagination Indicator */}
+            {totalPages > 1 && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs font-medium text-white z-10">
+                Page {currentPage} of {totalPages}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

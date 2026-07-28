@@ -141,6 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
+  const [newSpaceError, setNewSpaceError] = useState('');
   const [inviteToken, setInviteToken] = useState('');
   const [newBoardName, setNewBoardName] = useState('');
   const [newChatName, setNewChatName] = useState('');
@@ -171,6 +172,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
   const [showTaskUpdatedModal, setShowTaskUpdatedModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
+  const [showSpaceCreateSuccessModal, setShowSpaceCreateSuccessModal] = useState(false);
 
   // Video Call State
   const [showPreJoinModal, setShowPreJoinModal] = useState(false);
@@ -246,6 +248,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const handleCreateSpace = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSpaceName.trim()) return;
+
+    const normalizedName = newSpaceName.trim().toLowerCase();
+    const spaceExists = spaces.some(s => s.name.toLowerCase() === normalizedName);
+    
+    if (spaceExists) {
+      setNewSpaceError(`A space named "${newSpaceName.trim()}" already exists.`);
+      return;
+    }
 
     const initialSpace: MockSpace = {
       id: Date.now(),
@@ -323,8 +333,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setActiveSpaceId(initialSpace.id);
     setHasSpaces(true);
     setNewSpaceName('');
+    setNewSpaceError('');
     setActiveActionModal(null);
     setCurrentView('home');
+    setShowSpaceCreateSuccessModal(true);
   };
 
   // 2. Action Handler: Join Space
@@ -2249,18 +2261,27 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   <h3 className="text-sm font-bold text-white mb-1.5">Create a new Space</h3>
                   <p className="text-[11px] text-neutral-400 mb-4">Initialize a unified space for tasks and chat channels.</p>
                   <form onSubmit={handleCreateSpace} className="space-y-4">
-                    <input
-                      type="text"
-                      required
-                      value={newSpaceName}
-                      onChange={(e) => setNewSpaceName(e.target.value)}
-                      placeholder="e.g. engineering, acme-corps"
-                      className="w-full rounded-lg border border-white/[0.08] bg-neutral-900 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
-                    />
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        value={newSpaceName}
+                        onChange={(e) => {
+                          setNewSpaceName(e.target.value);
+                          setNewSpaceError('');
+                        }}
+                        placeholder="e.g. engineering, acme-corps"
+                        className={`w-full rounded-lg border ${newSpaceError ? 'border-red-500/50 focus:border-red-500' : 'border-white/[0.08] focus:border-purple-500'} bg-neutral-900 px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors`}
+                      />
+                      {newSpaceError && <p className="text-xs text-red-400 mt-1.5">{newSpaceError}</p>}
+                    </div>
                     <div className="flex gap-2 justify-end text-[11px] font-semibold">
                       <button 
                         type="button" 
-                        onClick={() => setActiveActionModal(null)}
+                        onClick={() => {
+                          setActiveActionModal(null);
+                          setNewSpaceError('');
+                        }}
                         className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
                       >
                         Cancel
@@ -2662,6 +2683,37 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                 className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
               >
                 Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Space Create Success Modal */}
+      <AnimatePresence>
+        {showSpaceCreateSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowSpaceCreateSuccessModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-purple-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-purple-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Space Created!</h3>
+              <p className="text-sm text-neutral-400 mb-6">Your new space is ready for collaboration.</p>
+              <button 
+                onClick={() => setShowSpaceCreateSuccessModal(false)}
+                className="w-full py-2.5 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Let's Go!
               </button>
             </div>
           </motion.div>

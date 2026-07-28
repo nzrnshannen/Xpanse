@@ -621,7 +621,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                   if (m.type === 'call_started' && m.callData?.status === 'active') {
                     return {
                       ...m,
-                      callData: { ...m.callData, status: 'ended' as const }
+                      callData: { 
+                        ...m.callData, 
+                        status: 'ended' as const,
+                        duration: formatDuration(durationMs),
+                        participantCount: 3
+                      }
                     } as Message;
                   }
                   return m;
@@ -629,17 +634,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
                 
                 return {
                   ...c,
-                  messages: [
-                    ...updatedMessages,
-                    {
-                      id: Math.random().toString(36).substr(2, 9),
-                      type: 'call_ended',
-                      sender: 'System',
-                      text: 'Meeting ended',
-                      time,
-                      callData: { duration: formatDuration(durationMs), participantCount: 3 }
-                    }
-                  ]
+                  messages: updatedMessages
                 };
               }
               return c;
@@ -2080,48 +2075,41 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   {/* Messages container */}
                   <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-4 pr-4">
                     {activeChannel.messages.map((msg, idx) => (
-                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'call_ended' || msg.type === 'meeting_minutes' ? 'justify-center my-4' : 'gap-3 text-xs items-start max-w-2xl'}`}>
+                      <div key={msg.id || idx} className={`flex ${msg.type === 'call_started' || msg.type === 'meeting_minutes' ? 'justify-center my-2' : 'gap-3 text-xs items-start max-w-2xl'}`}>
                         {msg.type === 'call_started' && (
-                          <div className="flex flex-col items-center bg-[#070709] border border-white/[0.05] p-4 rounded-2xl shadow-xl w-64 text-center">
-                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mb-3 text-purple-400">
-                              <Video className="w-5 h-5" />
-                            </div>
-                            <span className="font-bold text-neutral-300 text-sm mb-1">{msg.text} by {msg.callData?.startedBy}</span>
-                            <span className="text-[10px] text-neutral-500 mb-4">{msg.time}</span>
+                          <div className="flex items-center gap-2 bg-[#070709] border border-white/[0.05] py-1.5 px-3 rounded-full shadow-sm text-xs text-neutral-400 my-1">
+                            {msg.callData?.status === 'ended' ? (
+                              <PhoneOff className="w-3.5 h-3.5 text-neutral-500" />
+                            ) : (
+                              <Video className="w-3.5 h-3.5 text-purple-400" />
+                            )}
                             
                             {msg.callData?.status === 'ended' ? (
-                              <button disabled className="w-full py-2 bg-neutral-800 text-neutral-500 font-bold text-xs rounded-xl cursor-not-allowed">
-                                Call Ended
-                              </button>
+                              <span>
+                                <span className="text-neutral-300 font-medium">Meeting ended</span> 
+                                <span className="mx-1.5 opacity-50">&bull;</span>
+                                Duration: {msg.callData?.duration || '0s'}
+                                <span className="mx-1.5 opacity-50">&bull;</span>
+                                {msg.callData?.participantCount || 0} participants
+                                <span className="mx-1.5 opacity-50">&bull;</span>
+                                {msg.time}
+                              </span>
                             ) : (
-                              <button 
-                                onClick={handleStartVideoCall}
-                                disabled={isVideoCallActive}
-                                className="w-full py-2 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Join Call
-                              </button>
+                              <>
+                                <span>
+                                  <span className="text-neutral-300 font-medium">Meeting started</span> by {msg.callData?.startedBy}
+                                  <span className="mx-1.5 opacity-50">&bull;</span>
+                                  {msg.time}
+                                </span>
+                                <button 
+                                  onClick={handleStartVideoCall}
+                                  disabled={isVideoCallActive}
+                                  className="ml-2 px-2.5 py-0.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Join
+                                </button>
+                              </>
                             )}
-                          </div>
-                        )}
-                        {msg.type === 'call_ended' && (
-                          <div className="flex flex-col items-center bg-[#070709] border border-white/[0.05] p-4 rounded-2xl shadow-xl w-64 text-center">
-                            <div className="w-10 h-10 rounded-full bg-neutral-800 flex items-center justify-center mb-3 text-neutral-400">
-                              <PhoneOff className="w-5 h-5" />
-                            </div>
-                            <span className="font-bold text-neutral-300 text-sm mb-1">{msg.text}</span>
-                            <span className="text-[10px] text-neutral-500 mb-3">{msg.time}</span>
-                            <div className="flex items-center gap-4 text-xs font-medium text-neutral-400 w-full justify-center bg-black/20 p-2 rounded-lg">
-                              <div className="flex flex-col items-center">
-                                <span className="text-neutral-500 text-[10px] uppercase">Duration</span>
-                                <span>{msg.callData?.duration}</span>
-                              </div>
-                              <div className="w-px h-6 bg-white/[0.05]" />
-                              <div className="flex flex-col items-center">
-                                <span className="text-neutral-500 text-[10px] uppercase">Participants</span>
-                                <span>{msg.callData?.participantCount}</span>
-                              </div>
-                            </div>
                           </div>
                         )}
                         {msg.type === 'meeting_minutes' && msg.minutesData && (

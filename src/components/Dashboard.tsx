@@ -171,6 +171,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showTaskSuccessModal, setShowTaskSuccessModal] = useState(false);
   const [showTaskUpdatedModal, setShowTaskUpdatedModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
+  const [showSpaceCreateSuccessModal, setShowSpaceCreateSuccessModal] = useState(false);
 
   // Video Call State
   const [showPreJoinModal, setShowPreJoinModal] = useState(false);
@@ -325,6 +326,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setNewSpaceName('');
     setActiveActionModal(null);
     setCurrentView('home');
+    setShowSpaceCreateSuccessModal(true);
   };
 
   // 2. Action Handler: Join Space
@@ -2662,6 +2664,37 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                 className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
               >
                 Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Space Create Success Modal */}
+      <AnimatePresence>
+        {showSpaceCreateSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowSpaceCreateSuccessModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-purple-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-purple-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Space Created!</h3>
+              <p className="text-sm text-neutral-400 mb-6">Your new space is ready for collaboration.</p>
+              <button 
+                onClick={() => setShowSpaceCreateSuccessModal(false)}
+                className="w-full py-2.5 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Let's Go!
               </button>
             </div>
           </motion.div>

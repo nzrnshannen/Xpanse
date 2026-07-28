@@ -141,6 +141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
+  const [newSpaceError, setNewSpaceError] = useState('');
   const [inviteToken, setInviteToken] = useState('');
   const [newBoardName, setNewBoardName] = useState('');
   const [newChatName, setNewChatName] = useState('');
@@ -248,6 +249,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     e.preventDefault();
     if (!newSpaceName.trim()) return;
 
+    const normalizedName = newSpaceName.trim().toLowerCase();
+    const spaceExists = spaces.some(s => s.name.toLowerCase() === normalizedName);
+    
+    if (spaceExists) {
+      setNewSpaceError(`A space named "${newSpaceName.trim()}" already exists.`);
+      return;
+    }
+
     const initialSpace: MockSpace = {
       id: Date.now(),
       name: newSpaceName,
@@ -324,6 +333,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setActiveSpaceId(initialSpace.id);
     setHasSpaces(true);
     setNewSpaceName('');
+    setNewSpaceError('');
     setActiveActionModal(null);
     setCurrentView('home');
     setShowSpaceCreateSuccessModal(true);
@@ -2251,18 +2261,27 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   <h3 className="text-sm font-bold text-white mb-1.5">Create a new Space</h3>
                   <p className="text-[11px] text-neutral-400 mb-4">Initialize a unified space for tasks and chat channels.</p>
                   <form onSubmit={handleCreateSpace} className="space-y-4">
-                    <input
-                      type="text"
-                      required
-                      value={newSpaceName}
-                      onChange={(e) => setNewSpaceName(e.target.value)}
-                      placeholder="e.g. engineering, acme-corps"
-                      className="w-full rounded-lg border border-white/[0.08] bg-neutral-900 px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
-                    />
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        value={newSpaceName}
+                        onChange={(e) => {
+                          setNewSpaceName(e.target.value);
+                          setNewSpaceError('');
+                        }}
+                        placeholder="e.g. engineering, acme-corps"
+                        className={`w-full rounded-lg border ${newSpaceError ? 'border-red-500/50 focus:border-red-500' : 'border-white/[0.08] focus:border-purple-500'} bg-neutral-900 px-3.5 py-2.5 text-xs text-white focus:outline-none transition-colors`}
+                      />
+                      {newSpaceError && <p className="text-xs text-red-400 mt-1.5">{newSpaceError}</p>}
+                    </div>
                     <div className="flex gap-2 justify-end text-[11px] font-semibold">
                       <button 
                         type="button" 
-                        onClick={() => setActiveActionModal(null)}
+                        onClick={() => {
+                          setActiveActionModal(null);
+                          setNewSpaceError('');
+                        }}
                         className="px-3.5 py-2 rounded-lg text-neutral-400 hover:text-white"
                       >
                         Cancel

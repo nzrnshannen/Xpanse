@@ -609,7 +609,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     if (endForAll && activeCallMessageId) {
       const endTime = Date.now();
       const durationMs = callStartTime ? endTime - callStartTime : 0;
-      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       
       setSpaces(prev => prev.map(s => {
         if (s.id === activeSpaceId) {

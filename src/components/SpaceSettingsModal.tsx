@@ -520,22 +520,22 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
             )}
           </div>
         </div>
-
-        {/* Global Toast */}
-        <AnimatePresence>
-          {showToast && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full text-xs font-medium flex items-center gap-2 shadow-xl backdrop-blur-md"
-            >
-              <Check className="w-3.5 h-3.5" />
-              {showToast}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
+
+      {/* Global Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-8 left-1/2 -translate-x-1/2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 shadow-2xl backdrop-blur-md z-[110]"
+          >
+            <Check className="w-4 h-4" />
+            {showToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

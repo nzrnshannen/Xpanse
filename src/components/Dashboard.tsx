@@ -1580,11 +1580,11 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   <div className="mb-8 flex flex-col shadow-xl">
                     {/* The Colored Banner */}
                     <div 
-                      className="relative rounded-t-2xl border border-white/[0.06] border-b-0 overflow-hidden transition-colors duration-200 bg-cover bg-center" 
+                      className="relative rounded-t-2xl border border-white/[0.06] border-b-0 overflow-hidden transition-colors duration-200 bg-cover bg-center h-32 md:h-40" 
                       style={activeSpace?.color?.startsWith('data:image') ? { backgroundImage: `url(${activeSpace.color})` } : { backgroundColor: activeSpace?.color || '#0a0a0a' }}
                     >
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                      <div className="relative z-10 p-6 md:p-8 pb-6 flex items-end gap-6">
+                      <div className="absolute bottom-6 left-6 md:left-8">
                         {activeSpace?.icon?.startsWith('data:image') ? (
                           <img src={activeSpace.icon} alt="Space Avatar" className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 border-white/20 object-cover shadow-lg bg-black/20" />
                         ) : (
@@ -1592,19 +1592,18 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                             {activeSpace?.name ? activeSpace.name.charAt(0).toUpperCase() : 'S'}
                           </div>
                         )}
-                        
-                        <div className="mb-1 md:mb-2">
-                          <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest bg-black/30 border border-white/10 px-2.5 py-1 rounded-md backdrop-blur-md shadow-sm mb-2 inline-block">
-                            Space Dashboard
-                          </span>
-                          <h2 className="font-display text-2xl md:text-3xl font-extrabold text-white drop-shadow-md">
-                            Welcome to {activeSpace?.name}
-                          </h2>
-                        </div>
                       </div>
                     </div>
                     {/* The Description */}
-                    <div className="bg-neutral-950 border border-white/[0.06] rounded-b-2xl p-6 md:px-8 shadow-inner">
+                    <div className="bg-neutral-950 border border-white/[0.06] rounded-b-2xl p-6 md:px-8 shadow-inner flex flex-col">
+                      <div className="mb-4">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest border border-white/10 px-2.5 py-1 rounded-md shadow-sm mb-3 inline-block">
+                          Space Dashboard
+                        </span>
+                        <h2 className="font-display text-2xl md:text-3xl font-extrabold text-white">
+                          Welcome to {activeSpace?.name}
+                        </h2>
+                      </div>
                       <p className="text-xs text-neutral-400 max-w-xl leading-relaxed">
                         Every channel, task, and discussion in {activeSpace?.name} is anchored under this central space feed. Use the sub-menus to access sprint boards or channel communications.
                       </p>

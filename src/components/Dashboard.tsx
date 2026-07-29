@@ -1240,7 +1240,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   
                   {/* Active space glowing dot indicator */}
                   {space.id === activeSpaceId && (
-                    <span className="absolute -left-1 top-3 w-2 h-4 rounded-r-md" style={{ backgroundColor: space.color || '#9333ea', filter: 'brightness(1.5)' }} />
+                    <span className="absolute -left-1 top-3 w-2 h-4 rounded-r-md" style={{ backgroundColor: space.color?.startsWith('data:image') ? '#9333ea' : (space.color || '#9333ea'), filter: 'brightness(1.5)' }} />
                   )}
 
                   {/* Tooltip */}
@@ -1348,7 +1348,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                     {activeSpace?.name}
                   </h3>
                   <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: activeSpace?.color || '#10b981' }} />
+                    <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ backgroundColor: activeSpace?.color?.startsWith('data:image') ? '#10b981' : (activeSpace?.color || '#10b981') }} />
                     <span className="text-[9px] text-neutral-500 font-semibold uppercase tracking-wider">Workspace active</span>
                   </div>
                 </div>
@@ -1579,7 +1579,10 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   {/* Space Welcome Header */}
                   <div className="mb-8 flex flex-col shadow-xl">
                     {/* The Colored Banner */}
-                    <div className="relative rounded-t-2xl border border-white/[0.06] border-b-0 overflow-hidden transition-colors duration-200" style={{ backgroundColor: activeSpace?.color || '#0a0a0a' }}>
+                    <div 
+                      className="relative rounded-t-2xl border border-white/[0.06] border-b-0 overflow-hidden transition-colors duration-200 bg-cover bg-center" 
+                      style={activeSpace?.color?.startsWith('data:image') ? { backgroundImage: `url(${activeSpace.color})` } : { backgroundColor: activeSpace?.color || '#0a0a0a' }}
+                    >
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                       <div className="relative z-10 p-6 md:p-8 pb-6 flex items-end gap-6">
                         {activeSpace?.icon?.startsWith('data:image') ? (

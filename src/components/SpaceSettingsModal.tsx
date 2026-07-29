@@ -189,12 +189,11 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6 relative">
             {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <h3 className="text-sm font-semibold text-white border-b border-white/[0.05] pb-2">Space Profile</h3>
-                
-                <div>
+              <div className="space-y-6 relative">
+                <div className="sticky top-0 z-20 bg-neutral-950 pb-6 border-b border-white/[0.05] pt-6 -mt-6 -mx-6 px-6 shadow-xl">
+                  <h3 className="text-sm font-semibold text-white mb-4">Space Profile</h3>
                   <label className="block text-xs font-medium text-neutral-400 mb-2">Live Preview</label>
-                  <div className="w-full h-32 rounded-xl border border-white/[0.1] overflow-hidden relative transition-colors duration-200" style={{ backgroundColor: color }}>
+                  <div className="w-full h-32 rounded-xl border border-white/[0.1] overflow-hidden relative transition-colors duration-200 shadow-inner" style={{ backgroundColor: color }}>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                     <div className="absolute bottom-4 left-4 flex items-center gap-3">
                       {profileImage ? (

@@ -5,7 +5,20 @@ import {
   UserMinus, Check, Image as ImageIcon, Palette, Upload
 } from 'lucide-react';
 import type { SpaceMember } from './Dashboard';
+import { HexColorPicker } from 'react-colorful';
 
+const PRESET_COLORS = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#06b6d4', // Cyan
+  '#3b82f6', // Blue
+  '#8b5cf6', // Violet
+  '#d946ef', // Fuchsia
+  '#f43f5e', // Rose
+  '#64748b', // Slate
+];
 interface SpaceSettingsModalProps {
   spaceId: number;
   spaceName: string;
@@ -41,6 +54,20 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   const [profileMode, setProfileMode] = useState<'color' | 'image'>(isInitialImage ? 'image' : 'color');
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState(spaceColor);
+  const [hexInput, setHexInput] = useState(spaceColor);
+
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor);
+    setHexInput(newColor);
+  };
+
+  const handleHexInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setHexInput(val);
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      setColor(val);
+    }
+  };
   const [profileImage, setProfileImage] = useState(isInitialImage ? spaceIcon : '');
   const [showToast, setShowToast] = useState('');
   const [showNameChangeConfirm, setShowNameChangeConfirm] = useState(false);
@@ -166,6 +193,23 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
                 <h3 className="text-sm font-semibold text-white border-b border-white/[0.05] pb-2">Space Profile</h3>
                 
                 <div>
+                  <label className="block text-xs font-medium text-neutral-400 mb-2">Live Preview</label>
+                  <div className="w-full h-32 rounded-xl border border-white/[0.1] overflow-hidden relative transition-colors duration-200" style={{ backgroundColor: color }}>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-4 left-4 flex items-center gap-3">
+                      {profileImage ? (
+                        <img src={profileImage} alt="Avatar" className="w-12 h-12 rounded-lg border-2 border-white/20 object-cover shadow-lg" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg border-2 border-white/20 flex items-center justify-center bg-black/20 backdrop-blur-sm text-white font-bold text-xl shadow-lg">
+                          {name ? name.charAt(0).toUpperCase() : 'S'}
+                        </div>
+                      )}
+                      <div className="text-white font-bold text-lg drop-shadow-md">{name || 'Space Name'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
                   <label className="block text-xs font-medium text-neutral-400 mb-2">Space Name</label>
                   <input 
                     type="text" 
@@ -193,16 +237,59 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
                   </div>
 
                   {profileMode === 'color' ? (
-                    <div>
+                    <div className="space-y-4">
                       <label className="block text-xs font-medium text-neutral-400 mb-2">Theme Color</label>
-                      <div className="flex items-center gap-2 bg-neutral-900 border border-white/[0.1] rounded-lg px-3 py-2">
-                        <input 
-                          type="color" 
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
-                        />
-                        <span className="text-xs text-neutral-300 font-mono">{color}</span>
+                      <div className="space-y-5 bg-neutral-900/50 border border-white/[0.1] rounded-xl p-5">
+                        <div>
+                          <div className="text-xs font-medium text-neutral-400 mb-3">Preset Colors</div>
+                          <div className="flex flex-wrap gap-2.5">
+                            {PRESET_COLORS.map(preset => (
+                              <button
+                                key={preset}
+                                onClick={() => handleColorChange(preset)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                  color.toLowerCase() === preset.toLowerCase() 
+                                    ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900 scale-110' 
+                                    : 'hover:scale-110 opacity-90 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: preset }}
+                              >
+                                {color.toLowerCase() === preset.toLowerCase() && (
+                                  <Check className="w-4 h-4 text-white drop-shadow-md" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="border-t border-white/[0.05]" />
+
+                        <div className="flex flex-col sm:flex-row gap-6">
+                           <div className="flex-1">
+                             <div className="text-xs font-medium text-neutral-400 mb-3">Custom Color</div>
+                             <HexColorPicker 
+                               color={color} 
+                               onChange={handleColorChange} 
+                               style={{ width: '100%', height: '160px' }}
+                             />
+                           </div>
+                           <div className="w-full sm:w-48 space-y-4 pt-1 sm:pt-7">
+                             <div>
+                               <label className="block text-[10px] uppercase tracking-wider text-neutral-500 mb-1.5">Hex Code</label>
+                               <div className="flex items-center gap-3 bg-neutral-950 border border-white/[0.1] rounded-lg px-3 py-2.5 focus-within:border-purple-500 transition-colors">
+                                 <div className="w-4 h-4 rounded-full border border-white/[0.2] shadow-sm flex-shrink-0" style={{ backgroundColor: color }} />
+                                 <input
+                                   type="text"
+                                   value={hexInput}
+                                   onChange={handleHexInputChange}
+                                   className="w-full bg-transparent text-sm text-white focus:outline-none font-mono"
+                                   placeholder="#000000"
+                                   maxLength={7}
+                                 />
+                               </div>
+                             </div>
+                           </div>
+                        </div>
                       </div>
                     </div>
                   ) : (

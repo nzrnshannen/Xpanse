@@ -1219,29 +1219,37 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
 
           {/* Quick Space Selector Avatars */}
           <div className="flex flex-col gap-2 w-full items-center max-h-[320px] overflow-y-auto overflow-x-hidden pr-0.5">
-            {spaces.map(space => (
-              <button
-                key={space.id}
-                onClick={() => {
-                  setActiveSpaceId(space.id);
-                  setCurrentView('home');
-                }}
-                className={`relative group flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm transition-all cursor-pointer ${space.id === activeSpaceId ? 'bg-purple-600 text-white rounded-lg' : 'bg-neutral-900 border border-white/[0.05] text-neutral-400 hover:text-white hover:border-white/[0.1] hover:rounded-lg'}`}
-                title={space.name}
-              >
-                {space.name.substring(0, 2).toUpperCase()}
-                
-                {/* Active space glowing dot indicator */}
-                {space.id === activeSpaceId && (
-                  <span className="absolute left-0 top-3 w-1 h-4 bg-purple-500 rounded-r-md" />
-                )}
+            {spaces.map(space => {
+              const isImage = space.icon?.startsWith('data:image');
+              return (
+                <button
+                  key={space.id}
+                  onClick={() => {
+                    setActiveSpaceId(space.id);
+                    setCurrentView('home');
+                  }}
+                  className={`relative group flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm transition-all cursor-pointer overflow-hidden shadow-sm ${space.id === activeSpaceId ? 'text-white rounded-lg shadow-md' : 'bg-neutral-900 border border-white/[0.05] text-neutral-400 hover:text-white hover:border-white/[0.1] hover:rounded-lg'}`}
+                  style={space.id === activeSpaceId ? { backgroundColor: space.color || '#9333ea' } : undefined}
+                  title={space.name}
+                >
+                  {isImage ? (
+                    <img src={space.icon!} alt={space.name} className="w-full h-full object-cover" />
+                  ) : (
+                    space.name.substring(0, 2).toUpperCase()
+                  )}
+                  
+                  {/* Active space glowing dot indicator */}
+                  {space.id === activeSpaceId && (
+                    <span className="absolute -left-1 top-3 w-2 h-4 rounded-r-md" style={{ backgroundColor: space.color || '#9333ea', filter: 'brightness(1.5)' }} />
+                  )}
 
-                {/* Tooltip */}
-                <div className="absolute left-16 bg-neutral-950 border border-white/[0.08] text-white text-[10px] font-semibold px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-30">
-                  {space.name}
-                </div>
-              </button>
-            ))}
+                  {/* Tooltip */}
+                  <div className="absolute left-16 bg-neutral-950 border border-white/[0.08] text-white text-[10px] font-semibold px-2 py-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-30">
+                    {space.name}
+                  </div>
+                </button>
+              );
+            })}
 
             {/* Action: Add new Space */}
             <button
@@ -1568,19 +1576,36 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
               {/* ========================================== */}
               {currentView === 'home' && (
                 <div className="flex-1 p-6 md:p-8 flex flex-col overflow-y-auto max-w-4xl w-full mx-auto">
-                  {/* Space Welcome Banner */}
-                  <div className="relative rounded-2xl border border-white/[0.06] bg-neutral-950 p-6 md:p-8 overflow-hidden mb-8 shadow-xl">
-                    <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
-                    
-                    <span className="text-[10px] font-bold text-purple-400 uppercase tracking-widest bg-purple-500/10 border border-purple-500/20 px-2.5 py-1 rounded-md">
-                      Space Dashboard
-                    </span>
-                    <h2 className="font-display text-2xl md:text-3xl font-extrabold text-white mt-4">
-                      Welcome to {activeSpace?.name}
-                    </h2>
-                    <p className="text-xs text-neutral-400 mt-2 max-w-xl leading-relaxed">
-                      Every channel, task, and discussion in {activeSpace?.name} is anchored under this central space feed. Use the sub-menus to access sprint boards or channel communications.
-                    </p>
+                  {/* Space Welcome Header */}
+                  <div className="mb-8 flex flex-col shadow-xl">
+                    {/* The Colored Banner */}
+                    <div className="relative rounded-t-2xl border border-white/[0.06] border-b-0 overflow-hidden transition-colors duration-200" style={{ backgroundColor: activeSpace?.color || '#0a0a0a' }}>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <div className="relative z-10 p-6 md:p-8 pb-6 flex items-end gap-6">
+                        {activeSpace?.icon?.startsWith('data:image') ? (
+                          <img src={activeSpace.icon} alt="Space Avatar" className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 border-white/20 object-cover shadow-lg bg-black/20" />
+                        ) : (
+                          <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl border-2 border-white/20 flex items-center justify-center bg-black/20 backdrop-blur-md text-white font-bold text-3xl md:text-4xl shadow-lg">
+                            {activeSpace?.name ? activeSpace.name.charAt(0).toUpperCase() : 'S'}
+                          </div>
+                        )}
+                        
+                        <div className="mb-1 md:mb-2">
+                          <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest bg-black/30 border border-white/10 px-2.5 py-1 rounded-md backdrop-blur-md shadow-sm mb-2 inline-block">
+                            Space Dashboard
+                          </span>
+                          <h2 className="font-display text-2xl md:text-3xl font-extrabold text-white drop-shadow-md">
+                            Welcome to {activeSpace?.name}
+                          </h2>
+                        </div>
+                      </div>
+                    </div>
+                    {/* The Description */}
+                    <div className="bg-neutral-950 border border-white/[0.06] rounded-b-2xl p-6 md:px-8 shadow-inner">
+                      <p className="text-xs text-neutral-400 max-w-xl leading-relaxed">
+                        Every channel, task, and discussion in {activeSpace?.name} is anchored under this central space feed. Use the sub-menus to access sprint boards or channel communications.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Announcement wall */}

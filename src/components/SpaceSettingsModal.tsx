@@ -5,7 +5,20 @@ import {
   UserMinus, Check, Image as ImageIcon, Palette, Upload
 } from 'lucide-react';
 import type { SpaceMember } from './Dashboard';
+import { HexColorPicker } from 'react-colorful';
 
+const PRESET_COLORS = [
+  '#ef4444', // Red
+  '#f97316', // Orange
+  '#f59e0b', // Amber
+  '#10b981', // Emerald
+  '#06b6d4', // Cyan
+  '#3b82f6', // Blue
+  '#8b5cf6', // Violet
+  '#d946ef', // Fuchsia
+  '#f43f5e', // Rose
+  '#64748b', // Slate
+];
 interface SpaceSettingsModalProps {
   spaceId: number;
   spaceName: string;
@@ -41,6 +54,20 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   const [profileMode, setProfileMode] = useState<'color' | 'image'>(isInitialImage ? 'image' : 'color');
   const [name, setName] = useState(initialName);
   const [color, setColor] = useState(spaceColor);
+  const [hexInput, setHexInput] = useState(spaceColor);
+
+  const handleColorChange = (newColor: string) => {
+    setColor(newColor);
+    setHexInput(newColor);
+  };
+
+  const handleHexInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setHexInput(val);
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      setColor(val);
+    }
+  };
   const [profileImage, setProfileImage] = useState(isInitialImage ? spaceIcon : '');
   const [showToast, setShowToast] = useState('');
   const [showNameChangeConfirm, setShowNameChangeConfirm] = useState(false);
@@ -82,9 +109,7 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   };
 
   const commitProfileChanges = () => {
-    const finalIcon = profileMode === 'image' ? profileImage : '';
-    const finalColor = profileMode === 'color' ? color : '';
-    const updates: any = { color: finalColor, icon: finalIcon };
+    const updates: any = { color, icon: profileImage };
     if (name !== initialName) {
       updates.name = name;
       triggerToast('Email notifications dispatched to all members regarding Space Name change.');
@@ -162,9 +187,28 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-6 relative">
             {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <h3 className="text-sm font-semibold text-white border-b border-white/[0.05] pb-2">Space Profile</h3>
-                
+              <div className="space-y-6 relative">
+                <div className="sticky top-0 z-20 bg-neutral-950 pb-6 border-b border-white/[0.05] pt-6 -mt-6 -mx-6 px-6 shadow-xl">
+                  <h3 className="text-sm font-semibold text-white mb-4">Space Profile</h3>
+                  <label className="block text-xs font-medium text-neutral-400 mb-2">Live Preview</label>
+                  <div 
+                    className="w-full h-32 rounded-xl border border-white/[0.1] overflow-hidden relative transition-colors duration-200 shadow-inner bg-cover bg-center" 
+                    style={color.startsWith('data:image') ? { backgroundImage: `url(${color})` } : { backgroundColor: color }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    <div className="absolute bottom-4 left-4 flex items-center gap-3">
+                      {profileImage ? (
+                        <img src={profileImage} alt="Avatar" className="w-12 h-12 rounded-lg border-2 border-white/20 object-cover shadow-lg bg-black/20" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg border-2 border-white/20 flex items-center justify-center bg-black/20 backdrop-blur-sm text-white font-bold text-xl shadow-lg">
+                          {name ? name.charAt(0).toUpperCase() : 'S'}
+                        </div>
+                      )}
+                      <div className="text-white font-bold text-lg drop-shadow-md">{name || 'Space Name'}</div>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-neutral-400 mb-2">Space Name</label>
                   <input 
@@ -182,32 +226,104 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
                       onClick={() => setProfileMode('color')}
                       className={`text-xs font-semibold pb-1 ${profileMode === 'color' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-neutral-500'}`}
                     >
-                      Theme Color
+                      Banner
                     </button>
                     <button 
                       onClick={() => setProfileMode('image')}
                       className={`text-xs font-semibold pb-1 ${profileMode === 'image' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-neutral-500'}`}
                     >
-                      Profile Picture
+                      Display Picture
                     </button>
                   </div>
 
                   {profileMode === 'color' ? (
-                    <div>
-                      <label className="block text-xs font-medium text-neutral-400 mb-2">Theme Color</label>
-                      <div className="flex items-center gap-2 bg-neutral-900 border border-white/[0.1] rounded-lg px-3 py-2">
-                        <input 
-                          type="color" 
-                          value={color}
-                          onChange={(e) => setColor(e.target.value)}
-                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
-                        />
-                        <span className="text-xs text-neutral-300 font-mono">{color}</span>
+                    <div className="space-y-4">
+                      <label className="block text-xs font-medium text-neutral-400 mb-2">Banner Customization</label>
+                      <div className="space-y-5 bg-neutral-900/50 border border-white/[0.1] rounded-xl p-5">
+                        <div>
+                          <div className="text-xs font-medium text-neutral-400 mb-3">Preset Colors</div>
+                          <div className="flex flex-wrap gap-2.5">
+                            {PRESET_COLORS.map(preset => (
+                              <button
+                                key={preset}
+                                onClick={() => handleColorChange(preset)}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                                  color.toLowerCase() === preset.toLowerCase() 
+                                    ? 'ring-2 ring-white ring-offset-2 ring-offset-neutral-900 scale-110' 
+                                    : 'hover:scale-110 opacity-90 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: preset }}
+                              >
+                                {color.toLowerCase() === preset.toLowerCase() && (
+                                  <Check className="w-4 h-4 text-white drop-shadow-md" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="border-t border-white/[0.05]" />
+
+                        <div className="flex flex-col sm:flex-row gap-6">
+                           <div className="flex-1">
+                             <div className="text-xs font-medium text-neutral-400 mb-3">Custom Color</div>
+                             <HexColorPicker 
+                               color={color} 
+                               onChange={handleColorChange} 
+                               style={{ width: '100%', height: '160px' }}
+                             />
+                           </div>
+                            <div className="w-full sm:w-48 space-y-4 pt-1 sm:pt-7">
+                              <div>
+                                <label className="block text-[10px] uppercase tracking-wider text-neutral-500 mb-1.5">Hex Code</label>
+                                <div className="flex items-center gap-3 bg-neutral-950 border border-white/[0.1] rounded-lg px-3 py-2.5 focus-within:border-purple-500 transition-colors">
+                                  <div className="w-4 h-4 rounded-full border border-white/[0.2] shadow-sm flex-shrink-0" style={{ backgroundColor: color.startsWith('data:image') ? 'transparent' : color }} />
+                                  <input
+                                    type="text"
+                                    value={hexInput}
+                                    onChange={handleHexInputChange}
+                                    className="w-full bg-transparent text-sm text-white focus:outline-none font-mono"
+                                    placeholder="#000000"
+                                    maxLength={7}
+                                    disabled={color.startsWith('data:image')}
+                                  />
+                                </div>
+                              </div>
+                              <div className="pt-2">
+                                <label className="block text-[10px] uppercase tracking-wider text-neutral-500 mb-1.5">Or Upload Image</label>
+                                <label className="flex items-center justify-center w-full gap-2 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 border border-white/[0.1] rounded-lg text-xs font-medium text-white cursor-pointer transition-colors">
+                                  <Upload className="w-4 h-4" />
+                                  Upload Banner
+                                  <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                          setColor(reader.result as string);
+                                          setHexInput('');
+                                        };
+                                        reader.readAsDataURL(file);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                                {color.startsWith('data:image') && (
+                                  <button onClick={() => { setColor('#6366f1'); setHexInput('#6366f1'); }} className="mt-2 text-[10px] text-red-400 hover:text-red-300 w-full text-center">
+                                    Remove Uploaded Banner
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                         </div>
                       </div>
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs font-medium text-neutral-400 mb-2">Upload Profile Picture</label>
+                      <label className="block text-xs font-medium text-neutral-400 mb-2">Upload Display Picture</label>
                       <div className="flex items-center gap-4">
                         {profileImage ? (
                           <img src={profileImage} alt="Profile preview" className="w-12 h-12 rounded object-cover border border-white/[0.1]" />
@@ -433,22 +549,22 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
             )}
           </div>
         </div>
-
-        {/* Global Toast */}
-        <AnimatePresence>
-          {showToast && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full text-xs font-medium flex items-center gap-2 shadow-xl backdrop-blur-md"
-            >
-              <Check className="w-3.5 h-3.5" />
-              {showToast}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
+
+      {/* Global Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-8 left-1/2 -translate-x-1/2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 shadow-2xl backdrop-blur-md z-[110]"
+          >
+            <Check className="w-4 h-4" />
+            {showToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

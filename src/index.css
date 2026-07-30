@@ -11,6 +11,19 @@
   color-scheme: dark;
 }
 
+html[data-font-size="small"] {
+  font-size: 14px;
+}
+html[data-font-size="medium"] {
+  font-size: 16px;
+}
+html[data-font-size="large"] {
+  font-size: 18px;
+}
+html[data-font-size="xlarge"] {
+  font-size: 20px;
+}
+
 html, body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #050505;

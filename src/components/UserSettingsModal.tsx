@@ -9,7 +9,8 @@ import {
   CheckCircle2,
   Lock,
   Mail,
-  Camera
+  Camera,
+  Monitor
 } from 'lucide-react';
 
 export interface UserProfile {
@@ -38,7 +39,18 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   onUpdateProfile,
   onDeleteAccount
 }) => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'danger'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'security' | 'danger'>('profile');
+
+  // Appearance State
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>(() => {
+    return (localStorage.getItem('xpanse_font_size') as any) || 'medium';
+  });
+
+  const handleFontSizeChange = (size: 'small' | 'medium' | 'large' | 'xlarge') => {
+    setFontSize(size);
+    localStorage.setItem('xpanse_font_size', size);
+    document.documentElement.setAttribute('data-font-size', size);
+  };
 
   // Profile State
   const [firstName, setFirstName] = useState(profile.firstName);
@@ -147,6 +159,14 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
           </button>
           
           <button
+            onClick={() => setActiveTab('appearance')}
+            className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors cursor-pointer ${activeTab === 'appearance' ? 'bg-purple-500/10 text-purple-400' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
+          >
+            <Monitor className="w-4 h-4" />
+            Appearance
+          </button>
+          
+          <button
             onClick={() => setActiveTab('security')}
             className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${activeTab === 'security' ? 'bg-purple-500/10 text-purple-400' : 'text-neutral-400 hover:text-white hover:bg-white/5'}`}
           >
@@ -170,6 +190,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
           <div className="flex justify-between items-center p-6 border-b border-white/5">
             <h3 className="text-lg font-bold text-white">
               {activeTab === 'profile' && 'Profile Details'}
+              {activeTab === 'appearance' && 'Appearance Settings'}
               {activeTab === 'security' && 'Security & Password'}
               {activeTab === 'danger' && 'Danger Zone'}
             </h3>
@@ -280,6 +301,41 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   >
                     Save Changes
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Appearance Tab */}
+            {activeTab === 'appearance' && (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-bold text-white mb-2">Typography & Display</h4>
+                  <p className="text-xs text-neutral-400 mb-6">
+                    Adjust the application's font size. This will scale all text and relative spacing appropriately.
+                  </p>
+
+                  <div className="space-y-3">
+                    {[
+                      { id: 'small', label: 'Small', desc: 'Compact view with smaller text.' },
+                      { id: 'medium', label: 'Medium', desc: 'Default, recommended reading size.' },
+                      { id: 'large', label: 'Large', desc: 'Larger text for better readability.' },
+                      { id: 'xlarge', label: 'Extra Large', desc: 'Maximum text size for accessibility.' }
+                    ].map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => handleFontSizeChange(option.id as any)}
+                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${fontSize === option.id ? 'bg-purple-500/10 border-purple-500/50' : 'bg-neutral-900 border-white/10 hover:border-white/20'}`}
+                      >
+                        <div className="text-left">
+                          <p className={`font-medium ${fontSize === option.id ? 'text-purple-400' : 'text-white'}`}>{option.label}</p>
+                          <p className="text-xs text-neutral-500 mt-0.5">{option.desc}</p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${fontSize === option.id ? 'border-purple-500' : 'border-neutral-600'}`}>
+                          {fontSize === option.id && <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

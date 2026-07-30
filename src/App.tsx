@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { FeatureGrid } from './components/FeatureGrid';
@@ -15,6 +15,14 @@ const App: React.FC = () => {
     setAuthMode(mode);
     setIsAuthOpen(true);
   };
+
+  useEffect(() => {
+    // Font size
+    const savedFontSize = localStorage.getItem('xpanse_font_size');
+    if (savedFontSize) {
+      document.documentElement.setAttribute('data-font-size', savedFontSize);
+    }
+  }, []);
 
   // If user is authenticated, load the dashboard interface
   if (currentUserEmail) {

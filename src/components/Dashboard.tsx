@@ -44,6 +44,8 @@ import { VideoCallRoom } from './VideoCallRoom';
 import { MeetingMinutesModal } from './MeetingMinutesModal';
 import { PreJoinModal } from './PreJoinModal';
 import { SpaceSettingsModal } from './SpaceSettingsModal';
+import { UserSettingsModal } from './UserSettingsModal';
+import type { UserProfile } from './UserSettingsModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -205,6 +207,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [activeSpaceId, setActiveSpaceId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
+  // User Profile State
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    firstName: userEmail.split('@')[0],
+    lastName: '',
+    email: userEmail
+  });
+
   // Notification State
   const [notifications, setNotifications] = useState<SpaceNotification[]>([]);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
@@ -216,7 +225,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
 
   // Modal control states
-  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | 'task_preview' | 'logout' | null>(null);
+  const [activeActionModal, setActiveActionModal] = useState<'create_space' | 'join_space' | 'add_board' | 'add_chat' | 'add_column' | 'edit_column' | 'delete_column' | 'delete_chat' | 'task_preview' | 'logout' | 'user_settings' | null>(null);
 
   // Form states
   const [newSpaceName, setNewSpaceName] = useState('');
@@ -1654,12 +1663,18 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
           <div className="h-px bg-white/[0.05] w-8" />
           
           {/* Avatar badge */}
-          <div 
-            className="h-9 w-9 rounded-full bg-indigo-600 border border-white/[0.1] flex items-center justify-center text-[10px] font-bold text-white uppercase"
-            title={userEmail}
+          <button 
+            onClick={() => setActiveActionModal('user_settings')}
+            className="h-9 w-9 rounded-full bg-indigo-600 border border-white/[0.1] flex items-center justify-center text-[10px] font-bold text-white uppercase overflow-hidden cursor-pointer hover:ring-2 hover:ring-white/20 transition-all"
+            style={{ backgroundColor: userProfile.avatarUrl ? 'transparent' : userProfile.avatarColor }}
+            title="User Settings"
           >
-            {userEmail.substring(0, 2)}
-          </div>
+            {userProfile.avatarUrl ? (
+              <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              `${userProfile.firstName.charAt(0)}${userProfile.lastName ? userProfile.lastName.charAt(0) : ''}`
+            )}
+          </button>
 
           <button
             onClick={() => setActiveActionModal('logout')}
@@ -3856,6 +3871,24 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* User Settings Modal */}
+      <AnimatePresence>
+        {activeActionModal === 'user_settings' && (
+          <UserSettingsModal
+            profile={userProfile}
+            onClose={() => setActiveActionModal(null)}
+            onUpdateProfile={(updates) => {
+              setUserProfile(prev => ({ ...prev, ...updates }));
+              setActiveActionModal(null);
+            }}
+            onDeleteAccount={() => {
+              setActiveActionModal(null);
+              onLogout();
+            }}
+          />
         )}
       </AnimatePresence>
 

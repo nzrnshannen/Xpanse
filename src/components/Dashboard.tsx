@@ -157,6 +157,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [newFeedPost, setNewFeedPost] = useState('');
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editingPostText, setEditingPostText] = useState('');
+  const [postToDelete, setPostToDelete] = useState<number | null>(null);
 
   // Undo State
   const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
@@ -822,6 +823,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
       }
       return s;
     }));
+    setPostToDelete(null);
   };
 
   const handleEditFeedPostSubmit = (postId: number) => {
@@ -1680,7 +1682,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                                   <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.text); }} className="hover:text-neutral-300 text-neutral-500">
                                     <Edit2 className="h-3.5 w-3.5" />
                                   </button>
-                                  <button onClick={() => handleDeleteFeedPost(post.id)} className="hover:text-red-400 text-neutral-500">
+                                  <button onClick={() => setPostToDelete(post.id)} className="hover:text-red-400 text-neutral-500">
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </button>
                                 </div>
@@ -2851,6 +2853,46 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
               >
                 Awesome
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Post Delete Confirmation Modal */}
+      <AnimatePresence>
+        {postToDelete !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setPostToDelete(null)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-red-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col items-center text-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-red-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+                <Trash2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Delete Post?</h3>
+              <p className="text-sm text-neutral-400 mb-6">Are you sure you want to delete this post? This action cannot be undone.</p>
+              
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setPostToDelete(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] text-white font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteFeedPost(postToDelete)}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-colors cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

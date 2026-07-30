@@ -10,10 +10,7 @@ import {
   Lock,
   Mail,
   Camera,
-  Monitor,
-  Sun,
-  Moon,
-  Laptop
+  Monitor
 } from 'lucide-react';
 
 export interface UserProfile {
@@ -53,31 +50,6 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
     setFontSize(size);
     localStorage.setItem('xpanse_font_size', size);
     document.documentElement.setAttribute('data-font-size', size);
-  };
-
-  const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(() => {
-    return (localStorage.getItem('xpanse_theme') as any) || 'system';
-  });
-
-  const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
-    setThemeMode(mode);
-    localStorage.setItem('xpanse_theme', mode);
-    
-    if (mode === 'light') {
-      document.documentElement.classList.add('light');
-      document.documentElement.classList.remove('dark');
-    } else if (mode === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.documentElement.classList.remove('light');
-    } else {
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-        document.documentElement.classList.remove('light');
-      } else {
-        document.documentElement.classList.add('light');
-        document.documentElement.classList.remove('dark');
-      }
-    }
   };
 
   // Profile State
@@ -339,30 +311,9 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                 <div>
                   <h4 className="text-sm font-bold text-white mb-2">Typography & Display</h4>
                   <p className="text-xs text-neutral-400 mb-6">
-                    Adjust the application's font size and theme.
+                    Adjust the application's font size. This will scale all text and relative spacing appropriately.
                   </p>
-                  
-                  <div className="mb-6">
-                    <label className="block text-xs font-medium text-neutral-400 mb-3">Theme</label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { id: 'light', label: 'Light', icon: Sun },
-                        { id: 'dark', label: 'Dark', icon: Moon },
-                        { id: 'system', label: 'System', icon: Laptop },
-                      ].map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => handleThemeChange(option.id as any)}
-                          className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all cursor-pointer ${themeMode === option.id ? 'bg-purple-500/10 border-purple-500/50 text-purple-400' : 'bg-neutral-900 border-white/10 text-neutral-400 hover:border-white/20 hover:text-white'}`}
-                        >
-                          <option.icon className="w-6 h-6 mb-2" />
-                          <span className="text-sm font-medium">{option.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  <label className="block text-xs font-medium text-neutral-400 mb-3">Font Size</label>
                   <div className="space-y-3">
                     {[
                       { id: 'small', label: 'Small', desc: 'Compact view with smaller text.' },

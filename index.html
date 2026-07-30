@@ -8,28 +8,9 @@
     <script>
       (function() {
         try {
-          var theme = localStorage.getItem('xpanse_theme') || 'system';
           var fontSize = localStorage.getItem('xpanse_font_size');
-          
           if (fontSize) {
             document.documentElement.setAttribute('data-font-size', fontSize);
-          }
-          
-          var isDark = false;
-          if (theme === 'dark') {
-            isDark = true;
-          } else if (theme === 'light') {
-            isDark = false;
-          } else {
-            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          }
-          
-          if (isDark) {
-            document.documentElement.classList.add('dark');
-            document.documentElement.classList.remove('light');
-          } else {
-            document.documentElement.classList.add('light');
-            document.documentElement.classList.remove('dark');
           }
         } catch (e) {}
       })();

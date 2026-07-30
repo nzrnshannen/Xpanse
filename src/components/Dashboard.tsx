@@ -26,7 +26,9 @@ import {
   Video,
   Calendar,
   PhoneOff,
-  Settings2
+  Settings2,
+  MoreHorizontal,
+  History
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -102,6 +104,7 @@ interface FeedItem {
   authorEmail?: string;
   text: string;
   time: string;
+  editHistory?: { text: string; time: string }[];
 }
 
 export interface SpaceMember {
@@ -158,6 +161,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editingPostText, setEditingPostText] = useState('');
   const [postToDelete, setPostToDelete] = useState<number | null>(null);
+  const [openPostDropdown, setOpenPostDropdown] = useState<number | null>(null);
+  const [postHistoryToShow, setPostHistoryToShow] = useState<number | null>(null);
 
   // Undo State
   const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
@@ -832,7 +837,19 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
       if (s.id === activeSpaceId) {
         return {
           ...s,
-          feed: s.feed.map(p => p.id === postId ? { ...p, text: editingPostText.trim() } : p)
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              const newHistoryEntry = { text: p.text, time: p.time };
+              const currentHistory = p.editHistory || [];
+              return { 
+                ...p, 
+                text: editingPostText.trim(), 
+                time: `Edited ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                editHistory: [newHistoryEntry, ...currentHistory]
+              };
+            }
+            return p;
+          })
         };
       }
       return s;
@@ -1674,20 +1691,32 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                     <div className="flex-grow space-y-4 overflow-y-auto max-h-[360px] pr-2">
                       {activeSpace?.feed.map(post => (
                         <div key={post.id} className="p-4 rounded-xl border border-white/[0.04] bg-neutral-900/30 text-xs relative group">
-                          <div className="flex justify-between items-center mb-1">
+                          <div className="flex justify-between items-start mb-1">
                             <span className="font-bold text-neutral-300">{post.author}</span>
                             <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-neutral-500 mt-1">{post.time}</span>
                               {(post.author === 'You' || post.authorEmail === userEmail) && (
-                                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-opacity mr-2">
-                                  <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.text); }} className="hover:text-neutral-300 text-neutral-500">
-                                    <Edit2 className="h-3.5 w-3.5" />
+                                <div className="relative ml-1">
+                                  <button onClick={() => setOpenPostDropdown(openPostDropdown === post.id ? null : post.id)} className="hover:text-neutral-300 text-neutral-500 p-1">
+                                    <MoreHorizontal className="h-4 w-4" />
                                   </button>
-                                  <button onClick={() => setPostToDelete(post.id)} className="hover:text-red-400 text-neutral-500">
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                                  {openPostDropdown === post.id && (
+                                    <div className="absolute right-0 mt-1 w-36 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-20 overflow-hidden py-1">
+                                      <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.text); setOpenPostDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-white/5 flex items-center gap-2">
+                                        <Edit2 className="h-3 w-3" /> Edit
+                                      </button>
+                                      {post.editHistory && post.editHistory.length > 0 && (
+                                        <button onClick={() => { setPostHistoryToShow(post.id); setOpenPostDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-white/5 flex items-center gap-2">
+                                          <History className="h-3 w-3" /> Edit History
+                                        </button>
+                                      )}
+                                      <button onClick={() => { setPostToDelete(post.id); setOpenPostDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/5 mt-1 pt-2">
+                                        <Trash2 className="h-3 w-3" /> Delete
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               )}
-                              <span className="text-[9px] text-neutral-500">{post.time}</span>
                             </div>
                           </div>
                           {editingPostId === post.id ? (
@@ -2892,6 +2921,39 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                 >
                   Delete
                 </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Post Edit History Modal */}
+      <AnimatePresence>
+        {postHistoryToShow !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setPostHistoryToShow(null)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><History className="h-5 w-5 text-purple-400" /> Edit History</h3>
+                <button onClick={() => setPostHistoryToShow(null)} className="text-neutral-500 hover:text-white transition-colors cursor-pointer">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                {activeSpace?.feed.find(p => p.id === postHistoryToShow)?.editHistory?.map((history, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                    <div className="text-[10px] font-bold text-neutral-500 mb-2">{history.time}</div>
+                    <p className="text-xs text-neutral-300 whitespace-pre-wrap">{history.text}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </motion.div>

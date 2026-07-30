@@ -166,6 +166,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
 
   // Video Call State
+  const [showStartVideoCallConfirmModal, setShowStartVideoCallConfirmModal] = useState(false);
   const [showPreJoinModal, setShowPreJoinModal] = useState(false);
   const [initialCallIsMuted, setInitialCallIsMuted] = useState(false);
   const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
@@ -544,6 +545,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   };
 
   const handleStartVideoCall = () => {
+    setShowStartVideoCallConfirmModal(true);
+  };
+
+  const handleConfirmStartVideoCall = () => {
+    setShowStartVideoCallConfirmModal(false);
     setShowPreJoinModal(true);
   };
 
@@ -2634,6 +2640,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
             onClose={() => setShowPreJoinModal(false)}
             onJoin={handleConfirmJoin}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Start Video Call Confirmation Modal */}
+      <AnimatePresence>
+        {showStartVideoCallConfirmModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowStartVideoCallConfirmModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col items-center text-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-purple-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
+                <Video className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Start Video Call?</h3>
+              <p className="text-sm text-neutral-400 mb-6">This will start a video call and notify members in this space.</p>
+              
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowStartVideoCallConfirmModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] text-white font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmStartVideoCall}
+                  className="flex-1 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold transition-colors cursor-pointer"
+                >
+                  Start Call
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

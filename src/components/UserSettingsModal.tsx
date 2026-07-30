@@ -10,7 +10,9 @@ import {
   Lock,
   Mail,
   Camera,
-  Monitor
+  Monitor,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 export interface UserProfile {
@@ -68,6 +70,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Danger State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -363,11 +366,18 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"} 
                       value={currentPassword}
                       onChange={e => setCurrentPassword(e.target.value)}
-                      className="w-full bg-neutral-900 border border-white/10 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                      className="w-full bg-neutral-900 border border-white/10 rounded-lg pl-10 pr-10 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
                     />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -378,22 +388,36 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                   <div className="relative mb-4">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"} 
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
-                      className="w-full bg-neutral-900 border border-white/10 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                      className="w-full bg-neutral-900 border border-white/10 rounded-lg pl-10 pr-10 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
                     />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                   
                   <label className="block text-xs font-medium text-neutral-400 mb-1.5">Confirm New Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"} 
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
-                      className="w-full bg-neutral-900 border border-white/10 rounded-lg pl-10 pr-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                      className="w-full bg-neutral-900 border border-white/10 rounded-lg pl-10 pr-10 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
                     />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 

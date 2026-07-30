@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -30,7 +30,8 @@ import {
   MoreHorizontal,
   History,
   Smile,
-  CornerDownRight
+  CornerDownRight,
+  AlertCircle
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -172,6 +173,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   // Interactive UI Inputs
   const [newMessage, setNewMessage] = useState('');
   const [newFeedPost, setNewFeedPost] = useState('');
+  const [isPostInputShaking, setIsPostInputShaking] = useState(false);
+  const [showEmptyPostAlert, setShowEmptyPostAlert] = useState(false);
+  const postInputRef = useRef<HTMLInputElement>(null);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editingPostText, setEditingPostText] = useState('');
   const [postToDelete, setPostToDelete] = useState<number | null>(null);
@@ -824,7 +828,14 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
   // 6. Action Handler: Add Feed Announcement Post
   const handleAddFeedPost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFeedPost.trim() || !activeSpaceId) return;
+    if (!activeSpaceId) return;
+
+    if (!newFeedPost.trim()) {
+      setIsPostInputShaking(true);
+      setShowEmptyPostAlert(true);
+      setTimeout(() => setIsPostInputShaking(false), 400);
+      return;
+    }
 
     const newPost = {
       id: Date.now(),
@@ -1861,13 +1872,14 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
 
                     {/* Quick Post Box */}
                     <form onSubmit={handleAddFeedPost} className="mb-6">
-                      <div className="flex gap-2">
+                      <div className={`flex items-center gap-2 bg-neutral-950 border ${isPostInputShaking ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] animate-shake' : 'border-white/[0.08] focus-within:border-purple-500'} rounded-xl px-4 py-2.5 transition-colors`}>
                         <input
+                          ref={postInputRef}
                           type="text"
                           placeholder="Publish a space-wide update..."
                           value={newFeedPost}
                           onChange={(e) => setNewFeedPost(e.target.value)}
-                          className="flex-grow bg-neutral-950 border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors"
+                          className="flex-grow bg-transparent text-xs text-white focus:outline-none placeholder-neutral-500"
                         />
                         <button
                           type="submit"
@@ -3237,6 +3249,43 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
           >
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             <span className="text-sm font-medium text-emerald-100">Reply sent successfully.</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Empty Post Alert Modal */}
+      <AnimatePresence>
+        {showEmptyPostAlert && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => {
+              setShowEmptyPostAlert(false);
+              setTimeout(() => postInputRef.current?.focus(), 50);
+            }}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-red-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-red-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+                <AlertCircle className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Cannot create empty post</h3>
+              <p className="text-sm text-neutral-400 mb-6">Please enter some content before publishing your update.</p>
+              <button 
+                onClick={() => {
+                  setShowEmptyPostAlert(false);
+                  setTimeout(() => postInputRef.current?.focus(), 50);
+                }}
+                className="w-full py-2.5 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold transition-colors cursor-pointer"
+              >
+                OK
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

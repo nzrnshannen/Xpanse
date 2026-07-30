@@ -3268,20 +3268,20 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
           >
             <div 
               onClick={e => e.stopPropagation()}
-              className="relative w-full max-w-sm rounded-2xl border border-red-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+              className="relative w-full max-w-[280px] rounded-xl border border-red-500/30 bg-neutral-950 p-4 shadow-2xl overflow-hidden text-center flex flex-col items-center"
             >
-              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-red-500/10 blur-2xl pointer-events-none" />
-              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
-                <AlertCircle className="h-8 w-8" />
+              <div className="absolute -top-10 -right-10 h-20 w-20 rounded-full bg-red-500/10 blur-xl pointer-events-none" />
+              <div className="h-10 w-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-3">
+                <AlertCircle className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Cannot create empty post</h3>
-              <p className="text-sm text-neutral-400 mb-6">Please enter some content before publishing your update.</p>
+              <h3 className="text-sm font-bold text-white mb-1">Cannot create empty post</h3>
+              <p className="text-xs text-neutral-400 mb-4">Please enter some content before publishing your update.</p>
               <button 
                 onClick={() => {
                   setShowEmptyPostAlert(false);
                   setTimeout(() => postInputRef.current?.focus(), 50);
                 }}
-                className="w-full py-2.5 rounded-xl bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold transition-colors cursor-pointer"
+                className="w-full py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-bold transition-colors cursor-pointer"
               >
                 OK
               </button>

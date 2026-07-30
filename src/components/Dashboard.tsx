@@ -117,6 +117,7 @@ interface FeedItem {
   text: string;
   time: string;
   editHistory?: { text: string; time: string }[];
+  reactions?: Record<string, string[]>;
   replies?: ReplyItem[];
 }
 
@@ -185,6 +186,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [replyToDelete, setReplyToDelete] = useState<{postId: number, replyId: number} | null>(null);
   const [openReplyDropdown, setOpenReplyDropdown] = useState<number | null>(null);
   const [openReactionPickerId, setOpenReactionPickerId] = useState<{postId: number, replyId: number} | null>(null);
+  const [openPostReactionPickerId, setOpenPostReactionPickerId] = useState<number | null>(null);
 
   // Undo State
   const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
@@ -878,6 +880,33 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     }));
     setEditingPostId(null);
     setShowPostEditSuccessModal(true);
+  };
+
+  const handleTogglePostReaction = (postId: number, emoji: string) => {
+    if (!activeSpaceId || !userEmail) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              const currentReactions = p.reactions || {};
+              const userList = currentReactions[emoji] || [];
+              
+              if (userList.includes(userEmail)) {
+                const newList = userList.filter(email => email !== userEmail);
+                return { ...p, reactions: { ...currentReactions, [emoji]: newList } };
+              } else {
+                return { ...p, reactions: { ...currentReactions, [emoji]: [...userList, userEmail] } };
+              }
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+    setOpenPostReactionPickerId(null);
   };
 
   // Reply Handlers
@@ -1852,6 +1881,20 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                             <span className="font-bold text-neutral-300">{post.author}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-[9px] text-neutral-500 mt-1">{post.time}</span>
+                              <div className="relative">
+                                <button onClick={() => setOpenPostReactionPickerId(openPostReactionPickerId === post.id ? null : post.id)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-neutral-300 text-neutral-500 p-1">
+                                  <Smile className="h-4 w-4" />
+                                </button>
+                                {openPostReactionPickerId === post.id && (
+                                  <div className="absolute right-0 mt-1 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-30 p-2 flex gap-2">
+                                    {['👍', '❤️', '😂', '🎉', '🚀'].map(emoji => (
+                                      <button key={emoji} onClick={() => handleTogglePostReaction(post.id, emoji)} className="hover:scale-110 transition-transform text-lg">
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                               {(post.author === 'You' || post.authorEmail === userEmail) && (
                                 <div className="relative ml-1">
                                   <button onClick={() => setOpenPostDropdown(openPostDropdown === post.id ? null : post.id)} className="hover:text-neutral-300 text-neutral-500 p-1">
@@ -1892,6 +1935,26 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                             </div>
                           ) : (
                             <p className="text-neutral-400 leading-relaxed whitespace-pre-wrap">{post.text}</p>
+                          )}
+
+                          {/* Post Reaction Badges */}
+                          {post.reactions && Object.keys(post.reactions).length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {Object.entries(post.reactions).map(([emoji, users]) => {
+                                if (users.length === 0) return null;
+                                const hasReacted = userEmail ? users.includes(userEmail) : false;
+                                return (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => handleTogglePostReaction(post.id, emoji)}
+                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${hasReacted ? 'bg-purple-500/20 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'} transition-colors`}
+                                  >
+                                    <span>{emoji}</span>
+                                    <span>{users.length}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
 
                           {/* REPLIES SECTION */}

@@ -44,7 +44,8 @@ import { VideoCallRoom } from './VideoCallRoom';
 import { MeetingMinutesModal } from './MeetingMinutesModal';
 import { PreJoinModal } from './PreJoinModal';
 import { SpaceSettingsModal } from './SpaceSettingsModal';
-import { UserSettingsModal, UserProfile } from './UserSettingsModal';
+import { UserSettingsModal } from './UserSettingsModal';
+import type { UserProfile } from './UserSettingsModal';
 
 interface DashboardProps {
   onLogout: () => void;

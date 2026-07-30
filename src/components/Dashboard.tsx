@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -30,7 +30,8 @@ import {
   MoreHorizontal,
   History,
   Smile,
-  CornerDownRight
+  CornerDownRight,
+  AlertCircle
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -117,6 +118,7 @@ interface FeedItem {
   text: string;
   time: string;
   editHistory?: { text: string; time: string }[];
+  reactions?: Record<string, string[]>;
   replies?: ReplyItem[];
 }
 
@@ -171,6 +173,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   // Interactive UI Inputs
   const [newMessage, setNewMessage] = useState('');
   const [newFeedPost, setNewFeedPost] = useState('');
+  const [isPostInputShaking, setIsPostInputShaking] = useState(false);
+  const [showEmptyPostAlert, setShowEmptyPostAlert] = useState(false);
+  const postInputRef = useRef<HTMLInputElement>(null);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editingPostText, setEditingPostText] = useState('');
   const [postToDelete, setPostToDelete] = useState<number | null>(null);
@@ -185,6 +190,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [replyToDelete, setReplyToDelete] = useState<{postId: number, replyId: number} | null>(null);
   const [openReplyDropdown, setOpenReplyDropdown] = useState<number | null>(null);
   const [openReactionPickerId, setOpenReactionPickerId] = useState<{postId: number, replyId: number} | null>(null);
+  const [openPostReactionPickerId, setOpenPostReactionPickerId] = useState<number | null>(null);
 
   // Undo State
   const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
@@ -206,6 +212,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showSpaceCreateSuccessModal, setShowSpaceCreateSuccessModal] = useState(false);
   const [showPostCreateSuccessModal, setShowPostCreateSuccessModal] = useState(false);
   const [showPostEditSuccessModal, setShowPostEditSuccessModal] = useState(false);
+  const [showReplyCreateSuccessModal, setShowReplyCreateSuccessModal] = useState(false);
 
   // Video Call State
   const [showStartVideoCallConfirmModal, setShowStartVideoCallConfirmModal] = useState(false);
@@ -827,7 +834,14 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
   // 6. Action Handler: Add Feed Announcement Post
   const handleAddFeedPost = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFeedPost.trim() || !activeSpaceId) return;
+    if (!activeSpaceId) return;
+
+    if (!newFeedPost.trim()) {
+      setIsPostInputShaking(true);
+      setShowEmptyPostAlert(true);
+      setTimeout(() => setIsPostInputShaking(false), 400);
+      return;
+    }
 
     const newPost = {
       id: Date.now(),
@@ -886,6 +900,33 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     setShowPostEditSuccessModal(true);
   };
 
+  const handleTogglePostReaction = (postId: number, emoji: string) => {
+    if (!activeSpaceId || !userEmail) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              const currentReactions = p.reactions || {};
+              const userList = currentReactions[emoji] || [];
+              
+              if (userList.includes(userEmail)) {
+                const newList = userList.filter(email => email !== userEmail);
+                return { ...p, reactions: { ...currentReactions, [emoji]: newList } };
+              } else {
+                return { ...p, reactions: { ...currentReactions, [emoji]: [...userList, userEmail] } };
+              }
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+    setOpenPostReactionPickerId(null);
+  };
+
   // Reply Handlers
   const handleAddReply = (e: React.FormEvent, postId: number) => {
     e.preventDefault();
@@ -917,6 +958,10 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
 
     setNewReplyText('');
     setReplyingToPostId(null);
+    setShowReplyCreateSuccessModal(true);
+    setTimeout(() => {
+      setShowReplyCreateSuccessModal(false);
+    }, 3000);
   };
 
   const handleEditReplySubmit = (postId: number, replyId: number) => {
@@ -1833,13 +1878,14 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
 
                     {/* Quick Post Box */}
                     <form onSubmit={handleAddFeedPost} className="mb-6">
-                      <div className="flex gap-2">
+                      <div className={`flex items-center gap-2 bg-neutral-950 border ${isPostInputShaking ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)] animate-shake' : 'border-white/[0.08] focus-within:border-purple-500'} rounded-xl px-4 py-2.5 transition-colors`}>
                         <input
+                          ref={postInputRef}
                           type="text"
                           placeholder="Publish a space-wide update..."
                           value={newFeedPost}
                           onChange={(e) => setNewFeedPost(e.target.value)}
-                          className="flex-grow bg-neutral-950 border border-white/[0.08] rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors"
+                          className="flex-grow bg-transparent text-xs text-white focus:outline-none placeholder-neutral-500"
                         />
                         <button
                           type="submit"
@@ -1858,6 +1904,20 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                             <span className="font-bold text-neutral-300">{post.author}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-[9px] text-neutral-500 mt-1">{post.time}</span>
+                              <div className="relative">
+                                <button onClick={() => setOpenPostReactionPickerId(openPostReactionPickerId === post.id ? null : post.id)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-neutral-300 text-neutral-500 p-1">
+                                  <Smile className="h-4 w-4" />
+                                </button>
+                                {openPostReactionPickerId === post.id && (
+                                  <div className="absolute right-0 mt-1 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-30 p-2 flex gap-2">
+                                    {['👍', '❤️', '😂', '🎉', '🚀'].map(emoji => (
+                                      <button key={emoji} onClick={() => handleTogglePostReaction(post.id, emoji)} className="hover:scale-110 transition-transform text-lg">
+                                        {emoji}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                               {(post.author === 'You' || post.authorEmail === userEmail) && (
                                 <div className="relative ml-1">
                                   <button onClick={() => setOpenPostDropdown(openPostDropdown === post.id ? null : post.id)} className="hover:text-neutral-300 text-neutral-500 p-1">
@@ -1898,6 +1958,26 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                             </div>
                           ) : (
                             <p className="text-neutral-400 leading-relaxed whitespace-pre-wrap">{post.text}</p>
+                          )}
+
+                          {/* Post Reaction Badges */}
+                          {post.reactions && Object.keys(post.reactions).length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {Object.entries(post.reactions).map(([emoji, users]) => {
+                                if (users.length === 0) return null;
+                                const hasReacted = userEmail ? users.includes(userEmail) : false;
+                                return (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => handleTogglePostReaction(post.id, emoji)}
+                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${hasReacted ? 'bg-purple-500/20 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'} transition-colors`}
+                                  >
+                                    <span>{emoji}</span>
+                                    <span>{users.length}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           )}
 
                           {/* REPLIES SECTION */}
@@ -3158,6 +3238,58 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                 className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
               >
                 Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reply Create Success Modal */}
+      <AnimatePresence>
+        {showReplyCreateSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className="fixed bottom-6 left-1/2 z-[70] bg-[#022A1E] border border-emerald-500/30 px-4 py-2.5 rounded-full flex items-center gap-2 shadow-xl"
+          >
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-100">Reply sent successfully.</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Empty Post Alert Modal */}
+      <AnimatePresence>
+        {showEmptyPostAlert && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => {
+              setShowEmptyPostAlert(false);
+              setTimeout(() => postInputRef.current?.focus(), 50);
+            }}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-[280px] rounded-xl border border-red-500/30 bg-neutral-950 p-4 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-10 -right-10 h-20 w-20 rounded-full bg-red-500/10 blur-xl pointer-events-none" />
+              <div className="h-10 w-10 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-3">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <h3 className="text-sm font-bold text-white mb-1">Cannot create empty post</h3>
+              <p className="text-xs text-neutral-400 mb-4">Please enter some content before publishing your update.</p>
+              <button 
+                onClick={() => {
+                  setShowEmptyPostAlert(false);
+                  setTimeout(() => postInputRef.current?.focus(), 50);
+                }}
+                className="w-full py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm font-bold transition-colors cursor-pointer"
+              >
+                OK
               </button>
             </div>
           </motion.div>

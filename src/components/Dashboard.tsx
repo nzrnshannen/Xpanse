@@ -99,6 +99,7 @@ interface MockChannel {
 interface FeedItem {
   id: number;
   author: string;
+  authorEmail?: string;
   text: string;
   time: string;
 }
@@ -154,6 +155,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   // Interactive UI Inputs
   const [newMessage, setNewMessage] = useState('');
   const [newFeedPost, setNewFeedPost] = useState('');
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingPostText, setEditingPostText] = useState('');
 
   // Undo State
   const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
@@ -793,6 +796,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     const newPost = {
       id: Date.now(),
       author: 'You',
+      authorEmail: userEmail,
       text: newFeedPost,
       time: 'Just now'
     };
@@ -805,6 +809,30 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     }));
 
     setNewFeedPost('');
+  };
+
+  const handleDeleteFeedPost = (postId: number) => {
+    if (!activeSpaceId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return { ...s, feed: s.feed.filter(p => p.id !== postId) };
+      }
+      return s;
+    }));
+  };
+
+  const handleEditFeedPostSubmit = (postId: number) => {
+    if (!activeSpaceId || !editingPostText.trim()) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => p.id === postId ? { ...p, text: editingPostText.trim() } : p)
+        };
+      }
+      return s;
+    }));
+    setEditingPostId(null);
   };
 
   // 7. Kanban Handlers
@@ -1639,12 +1667,40 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                     {/* Announcement Feed Items */}
                     <div className="flex-grow space-y-4 overflow-y-auto max-h-[360px] pr-2">
                       {activeSpace?.feed.map(post => (
-                        <div key={post.id} className="p-4 rounded-xl border border-white/[0.04] bg-neutral-900/30 text-xs relative">
+                        <div key={post.id} className="p-4 rounded-xl border border-white/[0.04] bg-neutral-900/30 text-xs relative group">
                           <div className="flex justify-between items-center mb-1">
                             <span className="font-bold text-neutral-300">{post.author}</span>
-                            <span className="text-[9px] text-neutral-500">{post.time}</span>
+                            <div className="flex items-center gap-2">
+                              {(post.author === 'You' || post.authorEmail === userEmail) && (
+                                <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 transition-opacity mr-2">
+                                  <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.text); }} className="hover:text-neutral-300 text-neutral-500">
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button onClick={() => handleDeleteFeedPost(post.id)} className="hover:text-red-400 text-neutral-500">
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                              <span className="text-[9px] text-neutral-500">{post.time}</span>
+                            </div>
                           </div>
-                          <p className="text-neutral-400 leading-relaxed">{post.text}</p>
+                          {editingPostId === post.id ? (
+                            <div className="mt-2">
+                              <textarea
+                                className="w-full bg-neutral-950 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                                value={editingPostText}
+                                onChange={(e) => setEditingPostText(e.target.value)}
+                                rows={2}
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 mt-2">
+                                <button onClick={() => setEditingPostId(null)} className="text-neutral-400 hover:text-white text-xs px-2">Cancel</button>
+                                <button onClick={() => handleEditFeedPostSubmit(post.id)} className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/30 text-xs px-3 py-1 rounded-lg transition-colors">Save</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-neutral-400 leading-relaxed whitespace-pre-wrap">{post.text}</p>
+                          )}
                         </div>
                       ))}
                     </div>

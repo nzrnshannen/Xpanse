@@ -31,7 +31,11 @@ import {
   History,
   Smile,
   CornerDownRight,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  Megaphone,
+  Palette,
+  AtSign
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -130,6 +134,20 @@ export interface SpaceMember {
   status: 'active' | 'invited';
 }
 
+export interface SpaceNotification {
+  id: string;
+  spaceId: number;
+  type: 'announcement' | 'space_update' | 'mention';
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  targetUserEmail?: string;
+  linkData?: {
+    type: 'feed' | 'chat';
+    itemId: number | string;
+  };
+}
+
 interface MockSpace {
   id: number;
   name: string;
@@ -142,12 +160,54 @@ interface MockSpace {
   feed: FeedItem[];
 }
 
+const formatRelativeTime = (timestamp: string) => {
+  const diff = Date.now() - new Date(timestamp).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
+const createMentionNotifications = (text: string, spaceId: number, members: SpaceMember[], currentEmail: string, linkData: { type: 'feed' | 'chat'; itemId: number | string }): SpaceNotification[] => {
+  const notifs: SpaceNotification[] = [];
+  const words = text.split(' ');
+  const mentionedNames = words.filter(w => w.startsWith('@')).map(w => w.substring(1).replace(/[^\w]/g, '').toLowerCase());
+  
+  if (mentionedNames.length > 0) {
+    members.forEach(member => {
+      if (member.email === currentEmail) return;
+      
+      const memberFirstName = member.name.split(' ')[0].toLowerCase();
+      if (mentionedNames.includes(memberFirstName)) {
+        notifs.push({
+          id: `mention-${Date.now()}-${Math.random()}`,
+          spaceId,
+          type: 'mention',
+          message: `You were mentioned by ${currentEmail.split('@')[0]} in a ${linkData.type === 'feed' ? 'post' : 'message'}`,
+          timestamp: new Date().toISOString(),
+          isRead: false,
+          targetUserEmail: member.email,
+          linkData
+        });
+      }
+    });
+  }
+  return notifs;
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => {
   // Base State for Spaces
   const [hasSpaces, setHasSpaces] = useState(false);
   const [spaces, setSpaces] = useState<MockSpace[]>([]);
   const [activeSpaceId, setActiveSpaceId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Notification State
+  const [notifications, setNotifications] = useState<SpaceNotification[]>([]);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
 
   // Main Active Area view state
   const [currentView, setCurrentView] = useState<'home' | 'boards_list' | 'kanban' | 'chats' | 'notes'>('home');
@@ -554,6 +614,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setMentionTriggerIndex(-1);
   };
 
+  const handleNotificationClick = (notification: SpaceNotification) => {
+    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
+    setShowNotificationsPanel(false);
+
+    if (!notification.linkData) return;
+
+    if (notification.linkData.type === 'feed') {
+      setCurrentView('home');
+    } else if (notification.linkData.type === 'chat') {
+      setCurrentView('chats');
+      if (typeof notification.linkData.itemId === 'string') {
+        setActiveChannelId(notification.linkData.itemId);
+      }
+    }
+  };
+
   const handleChatInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showMentionPopup) return;
     
@@ -788,6 +864,14 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsg = { sender: 'You', text: newMessage, time };
 
+    const activeSpaceObj = spaces.find(s => s.id === activeSpaceId);
+    if (activeSpaceObj) {
+      const mentionNotifs = createMentionNotifications(newMessage, activeSpaceId, activeSpaceObj.members || [], userEmail, { type: 'chat', itemId: activeChannelId });
+      if (mentionNotifs.length > 0) {
+        setNotifications(prev => [...prev, ...mentionNotifs]);
+      }
+    }
+
     setSpaces(prev => prev.map(s => {
       if (s.id === activeSpaceId) {
         return {
@@ -850,6 +934,25 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
       text: newFeedPost,
       time: 'Just now'
     };
+
+    const activeSpaceObj = spaces.find(s => s.id === activeSpaceId);
+    if (activeSpaceObj) {
+      // 1. Announcement Notification (for everyone else)
+      const announcementNotif: SpaceNotification = {
+        id: `announcement-${Date.now()}`,
+        spaceId: activeSpaceId,
+        type: 'announcement',
+        message: `New space announcement posted by ${userEmail.split('@')[0]}`,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        linkData: { type: 'feed', itemId: newPost.id }
+      };
+
+      // 2. Mention Notifications
+      const mentionNotifs = createMentionNotifications(newFeedPost, activeSpaceId, activeSpaceObj.members || [], userEmail, { type: 'feed', itemId: newPost.id });
+
+      setNotifications(prev => [...prev, announcementNotif, ...mentionNotifs]);
+    }
 
     setSpaces(prev => prev.map(s => {
       if (s.id === activeSpaceId) {
@@ -940,6 +1043,14 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
       time: 'Just now',
       reactions: {}
     };
+
+    const activeSpaceObj = spaces.find(s => s.id === activeSpaceId);
+    if (activeSpaceObj) {
+      const mentionNotifs = createMentionNotifications(newReplyText, activeSpaceId, activeSpaceObj.members || [], userEmail, { type: 'feed', itemId: postId });
+      if (mentionNotifs.length > 0) {
+        setNotifications(prev => [...prev, ...mentionNotifs]);
+      }
+    }
 
     setSpaces(prev => prev.map(s => {
       if (s.id === activeSpaceId) {
@@ -1611,12 +1722,23 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                     <span className="text-[9px] text-neutral-500 font-semibold uppercase tracking-wider">Workspace active</span>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setShowSpaceSettingsModal(true)}
-                  className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.05] transition-colors"
-                >
-                  <Settings2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-0.5">
+                  <button 
+                    onClick={() => setShowNotificationsPanel(true)}
+                    className="relative p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.05] transition-colors"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {notifications.filter(n => !n.isRead && (!n.targetUserEmail || n.targetUserEmail === userEmail)).length > 0 && (
+                      <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-red-500 border-2 border-[#070709]"></span>
+                    )}
+                  </button>
+                  <button 
+                    onClick={() => setShowSpaceSettingsModal(true)}
+                    className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-white/[0.05] transition-colors"
+                  >
+                    <Settings2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Navigation List */}
@@ -3452,6 +3574,17 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
             onClose={() => setShowSpaceSettingsModal(false)}
             onUpdateSpace={(updates) => {
               setSpaces(prev => prev.map(s => s.id === activeSpace.id ? { ...s, ...updates } : s));
+              
+              const updateMsg = updates.name ? `Space renamed to ${updates.name}` : `Space aesthetics updated`;
+              const updateNotif: SpaceNotification = {
+                id: `space_update-${Date.now()}`,
+                spaceId: activeSpace.id,
+                type: 'space_update',
+                message: updateMsg,
+                timestamp: new Date().toISOString(),
+                isRead: false
+              };
+              setNotifications(prev => [...prev, updateNotif]);
             }}
             onUpdateMemberRole={(memberId, role) => {
               setSpaces(prev => prev.map(s => {
@@ -3655,6 +3788,72 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                   Log Out
                 </button>
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Notifications Drawer/Panel */}
+      <AnimatePresence>
+        {showNotificationsPanel && (
+          <motion.div
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed top-0 right-0 bottom-0 w-80 bg-[#070709] border-l border-white/[0.05] z-[90] shadow-2xl flex flex-col"
+          >
+            <div className="p-4 border-b border-white/[0.05] flex justify-between items-center bg-black/20">
+              <h3 className="font-bold text-white flex items-center gap-2">
+                <Bell className="w-4 h-4 text-purple-400" /> Notifications
+              </h3>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))}
+                  className="text-[10px] font-medium text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  Mark all read
+                </button>
+                <button onClick={() => setShowNotificationsPanel(false)} className="p-1 rounded-md text-neutral-500 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {notifications.filter(n => (!n.targetUserEmail || n.targetUserEmail === userEmail)).length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Bell className="w-8 h-8 text-neutral-700 mb-2" />
+                  <p className="text-sm font-medium text-neutral-500">No notifications yet</p>
+                </div>
+              ) : (
+                notifications
+                  .filter(n => (!n.targetUserEmail || n.targetUserEmail === userEmail))
+                  .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                  .map(notification => (
+                    <button 
+                      key={notification.id}
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`w-full text-left p-3 rounded-xl border transition-colors flex gap-3 items-start cursor-pointer ${notification.isRead ? 'bg-neutral-900/40 border-white/[0.02] opacity-70' : 'bg-neutral-900 border-white/[0.08] shadow-sm hover:border-purple-500/50 hover:bg-purple-500/5'}`}
+                    >
+                      <div className={`mt-0.5 flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${
+                        notification.type === 'announcement' ? 'bg-orange-500/10 text-orange-400' :
+                        notification.type === 'space_update' ? 'bg-blue-500/10 text-blue-400' :
+                        'bg-purple-500/10 text-purple-400'
+                      }`}>
+                        {notification.type === 'announcement' && <Megaphone className="w-3.5 h-3.5" />}
+                        {notification.type === 'space_update' && <Palette className="w-3.5 h-3.5" />}
+                        {notification.type === 'mention' && <AtSign className="w-3.5 h-3.5" />}
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <p className={`text-xs ${notification.isRead ? 'text-neutral-400' : 'text-neutral-200'} line-clamp-2`}>{notification.message}</p>
+                        <p className="text-[10px] text-neutral-500 mt-1 font-medium">{formatRelativeTime(notification.timestamp)}</p>
+                      </div>
+                      {!notification.isRead && (
+                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full flex-shrink-0 mt-1.5"></div>
+                      )}
+                    </button>
+                  ))
+              )}
             </div>
           </motion.div>
         )}

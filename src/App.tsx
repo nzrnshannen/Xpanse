@@ -17,10 +17,28 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
+    // Font size
     const savedFontSize = localStorage.getItem('xpanse_font_size');
     if (savedFontSize) {
       document.documentElement.setAttribute('data-font-size', savedFontSize);
     }
+    
+    // Theme listener for System mode
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (localStorage.getItem('xpanse_theme') === 'system' || !localStorage.getItem('xpanse_theme')) {
+        if (e.matches) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.classList.remove('light');
+        } else {
+          document.documentElement.classList.add('light');
+          document.documentElement.classList.remove('dark');
+        }
+      }
+    };
+    
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   // If user is authenticated, load the dashboard interface

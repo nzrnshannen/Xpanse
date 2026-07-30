@@ -942,6 +942,9 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     setNewReplyText('');
     setReplyingToPostId(null);
     setShowReplyCreateSuccessModal(true);
+    setTimeout(() => {
+      setShowReplyCreateSuccessModal(false);
+    }, 3000);
   };
 
   const handleEditReplySubmit = (postId: number, replyId: number) => {
@@ -3227,29 +3230,13 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
       <AnimatePresence>
         {showReplyCreateSuccessModal && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-            onClick={() => setShowReplyCreateSuccessModal(false)}
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 50, x: '-50%' }}
+            className="fixed bottom-6 left-1/2 z-[70] bg-[#022A1E] border border-emerald-500/30 px-4 py-2.5 rounded-full flex items-center gap-2 shadow-xl"
           >
-            <div 
-              onClick={e => e.stopPropagation()}
-              className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
-            >
-              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
-              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">Reply Sent!</h3>
-              <p className="text-sm text-neutral-400 mb-6">Your reply has been added to the discussion thread.</p>
-              <button 
-                onClick={() => setShowReplyCreateSuccessModal(false)}
-                className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
-              >
-                Awesome
-              </button>
-            </div>
+            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+            <span className="text-sm font-medium text-emerald-100">Reply sent successfully.</span>
           </motion.div>
         )}
       </AnimatePresence>

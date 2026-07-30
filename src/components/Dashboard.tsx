@@ -26,7 +26,11 @@ import {
   Video,
   Calendar,
   PhoneOff,
-  Settings2
+  Settings2,
+  MoreHorizontal,
+  History,
+  Smile,
+  CornerDownRight
 } from 'lucide-react';
 
 import { Notes } from './Notes';
@@ -96,11 +100,24 @@ interface MockChannel {
   messages: Message[];
 }
 
+export interface ReplyItem {
+  id: number;
+  author: string;
+  authorEmail?: string;
+  text: string;
+  time: string;
+  editHistory?: { text: string; time: string }[];
+  reactions: Record<string, string[]>;
+}
+
 interface FeedItem {
   id: number;
   author: string;
+  authorEmail?: string;
   text: string;
   time: string;
+  editHistory?: { text: string; time: string }[];
+  replies?: ReplyItem[];
 }
 
 export interface SpaceMember {
@@ -154,6 +171,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   // Interactive UI Inputs
   const [newMessage, setNewMessage] = useState('');
   const [newFeedPost, setNewFeedPost] = useState('');
+  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingPostText, setEditingPostText] = useState('');
+  const [postToDelete, setPostToDelete] = useState<number | null>(null);
+  const [openPostDropdown, setOpenPostDropdown] = useState<number | null>(null);
+  const [postHistoryToShow, setPostHistoryToShow] = useState<number | null>(null);
+
+  // Reply & Reaction States
+  const [replyingToPostId, setReplyingToPostId] = useState<number | null>(null);
+  const [newReplyText, setNewReplyText] = useState('');
+  const [editingReplyId, setEditingReplyId] = useState<{postId: number, replyId: number} | null>(null);
+  const [editingReplyText, setEditingReplyText] = useState('');
+  const [replyToDelete, setReplyToDelete] = useState<{postId: number, replyId: number} | null>(null);
+  const [openReplyDropdown, setOpenReplyDropdown] = useState<number | null>(null);
+  const [openReactionPickerId, setOpenReactionPickerId] = useState<{postId: number, replyId: number} | null>(null);
 
   // Undo State
   const [deletedTaskState, setDeletedTaskState] = useState<{task: Task, timeoutId: number} | null>(null);
@@ -173,6 +204,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [showTaskUpdatedModal, setShowTaskUpdatedModal] = useState(false);
   const [showChatDeleteSuccessModal, setShowChatDeleteSuccessModal] = useState(false);
   const [showSpaceCreateSuccessModal, setShowSpaceCreateSuccessModal] = useState(false);
+  const [showPostCreateSuccessModal, setShowPostCreateSuccessModal] = useState(false);
+  const [showPostEditSuccessModal, setShowPostEditSuccessModal] = useState(false);
 
   // Video Call State
   const [showPreJoinModal, setShowPreJoinModal] = useState(false);
@@ -793,6 +826,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     const newPost = {
       id: Date.now(),
       author: 'You',
+      authorEmail: userEmail,
       text: newFeedPost,
       time: 'Just now'
     };
@@ -805,6 +839,180 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
     }));
 
     setNewFeedPost('');
+    setShowPostCreateSuccessModal(true);
+  };
+
+  const handleDeleteFeedPost = (postId: number) => {
+    if (!activeSpaceId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return { ...s, feed: s.feed.filter(p => p.id !== postId) };
+      }
+      return s;
+    }));
+    setPostToDelete(null);
+  };
+
+  const handleEditFeedPostSubmit = (postId: number) => {
+    if (!activeSpaceId || !editingPostText.trim()) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              const newHistoryEntry = { text: p.text, time: p.time };
+              const currentHistory = p.editHistory || [];
+              return { 
+                ...p, 
+                text: editingPostText.trim(), 
+                time: `Edited ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                editHistory: [newHistoryEntry, ...currentHistory]
+              };
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+    setEditingPostId(null);
+    setShowPostEditSuccessModal(true);
+  };
+
+  // Reply Handlers
+  const handleAddReply = (e: React.FormEvent, postId: number) => {
+    e.preventDefault();
+    if (!activeSpaceId || !newReplyText.trim()) return;
+
+    const newReply: ReplyItem = {
+      id: Date.now(),
+      author: 'You',
+      authorEmail: userEmail,
+      text: newReplyText.trim(),
+      time: 'Just now',
+      reactions: {}
+    };
+
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              return { ...p, replies: [...(p.replies || []), newReply] };
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+
+    setNewReplyText('');
+    setReplyingToPostId(null);
+  };
+
+  const handleEditReplySubmit = (postId: number, replyId: number) => {
+    if (!activeSpaceId || !editingReplyText.trim()) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              return {
+                ...p,
+                replies: p.replies?.map(r => {
+                  if (r.id === replyId) {
+                    const newHistoryEntry = { text: r.text, time: r.time };
+                    const currentHistory = r.editHistory || [];
+                    return {
+                      ...r,
+                      text: editingReplyText.trim(),
+                      time: `Edited ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+                      editHistory: [newHistoryEntry, ...currentHistory]
+                    };
+                  }
+                  return r;
+                })
+              };
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+    setEditingReplyId(null);
+  };
+
+  const handleDeleteReply = (postId: number, replyId: number) => {
+    if (!activeSpaceId) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              return { ...p, replies: p.replies?.filter(r => r.id !== replyId) };
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+    setReplyToDelete(null);
+  };
+
+  const handleToggleReaction = (postId: number, replyId: number, emoji: string) => {
+    if (!activeSpaceId || !userEmail) return;
+    setSpaces(prev => prev.map(s => {
+      if (s.id === activeSpaceId) {
+        return {
+          ...s,
+          feed: s.feed.map(p => {
+            if (p.id === postId) {
+              return {
+                ...p,
+                replies: p.replies?.map(r => {
+                  if (r.id === replyId) {
+                    const currentReactions = r.reactions || {};
+                    const userList = currentReactions[emoji] || [];
+                    
+                    if (userList.includes(userEmail)) {
+                      // Remove reaction
+                      const newList = userList.filter(email => email !== userEmail);
+                      return {
+                        ...r,
+                        reactions: {
+                          ...currentReactions,
+                          [emoji]: newList
+                        }
+                      };
+                    } else {
+                      // Add reaction
+                      return {
+                        ...r,
+                        reactions: {
+                          ...currentReactions,
+                          [emoji]: [...userList, userEmail]
+                        }
+                      };
+                    }
+                  }
+                  return r;
+                })
+              };
+            }
+            return p;
+          })
+        };
+      }
+      return s;
+    }));
+    setOpenReactionPickerId(null);
   };
 
   // 7. Kanban Handlers
@@ -1639,12 +1847,166 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
                     {/* Announcement Feed Items */}
                     <div className="flex-grow space-y-4 overflow-y-auto max-h-[360px] pr-2">
                       {activeSpace?.feed.map(post => (
-                        <div key={post.id} className="p-4 rounded-xl border border-white/[0.04] bg-neutral-900/30 text-xs relative">
-                          <div className="flex justify-between items-center mb-1">
+                        <div key={post.id} className="p-4 rounded-xl border border-white/[0.04] bg-neutral-900/30 text-xs relative group">
+                          <div className="flex justify-between items-start mb-1">
                             <span className="font-bold text-neutral-300">{post.author}</span>
-                            <span className="text-[9px] text-neutral-500">{post.time}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[9px] text-neutral-500 mt-1">{post.time}</span>
+                              {(post.author === 'You' || post.authorEmail === userEmail) && (
+                                <div className="relative ml-1">
+                                  <button onClick={() => setOpenPostDropdown(openPostDropdown === post.id ? null : post.id)} className="hover:text-neutral-300 text-neutral-500 p-1">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </button>
+                                  {openPostDropdown === post.id && (
+                                    <div className="absolute right-0 mt-1 w-36 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-20 overflow-hidden py-1">
+                                      <button onClick={() => { setEditingPostId(post.id); setEditingPostText(post.text); setOpenPostDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-white/5 flex items-center gap-2">
+                                        <Edit2 className="h-3 w-3" /> Edit
+                                      </button>
+                                      {post.editHistory && post.editHistory.length > 0 && (
+                                        <button onClick={() => { setPostHistoryToShow(post.id); setOpenPostDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-white/5 flex items-center gap-2">
+                                          <History className="h-3 w-3" /> Edit History
+                                        </button>
+                                      )}
+                                      <button onClick={() => { setPostToDelete(post.id); setOpenPostDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/5 mt-1 pt-2">
+                                        <Trash2 className="h-3 w-3" /> Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-neutral-400 leading-relaxed">{post.text}</p>
+                          {editingPostId === post.id ? (
+                            <div className="mt-2">
+                              <textarea
+                                className="w-full bg-neutral-950 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                                value={editingPostText}
+                                onChange={(e) => setEditingPostText(e.target.value)}
+                                rows={2}
+                                autoFocus
+                              />
+                              <div className="flex justify-end gap-2 mt-2">
+                                <button onClick={() => setEditingPostId(null)} className="text-neutral-400 hover:text-white text-xs px-2">Cancel</button>
+                                <button onClick={() => handleEditFeedPostSubmit(post.id)} className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/30 text-xs px-3 py-1 rounded-lg transition-colors">Save</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-neutral-400 leading-relaxed whitespace-pre-wrap">{post.text}</p>
+                          )}
+
+                          {/* REPLIES SECTION */}
+                          <div className="mt-4 border-l-2 border-white/5 pl-4 space-y-3">
+                            {post.replies?.map(reply => (
+                              <div key={reply.id} className="relative group">
+                                <div className="flex justify-between items-start mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-neutral-300 text-[11px]">{reply.author}</span>
+                                    <span className="text-[9px] text-neutral-500">{reply.time}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative">
+                                      <button onClick={() => setOpenReactionPickerId(openReactionPickerId?.replyId === reply.id ? null : { postId: post.id, replyId: reply.id })} className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-neutral-300 text-neutral-500 p-1">
+                                        <Smile className="h-3.5 w-3.5" />
+                                      </button>
+                                      {openReactionPickerId?.postId === post.id && openReactionPickerId?.replyId === reply.id && (
+                                        <div className="absolute right-0 mt-1 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-30 p-2 flex gap-2">
+                                          {['👍', '❤️', '😂', '🎉', '🚀'].map(emoji => (
+                                            <button key={emoji} onClick={() => handleToggleReaction(post.id, reply.id, emoji)} className="hover:scale-110 transition-transform text-lg">
+                                              {emoji}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {(reply.author === 'You' || reply.authorEmail === userEmail) && (
+                                      <div className="relative">
+                                        <button onClick={() => setOpenReplyDropdown(openReplyDropdown === reply.id ? null : reply.id)} className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-neutral-300 text-neutral-500 p-1">
+                                          <MoreHorizontal className="h-3.5 w-3.5" />
+                                        </button>
+                                        {openReplyDropdown === reply.id && (
+                                          <div className="absolute right-0 mt-1 w-36 bg-neutral-900 border border-white/10 rounded-lg shadow-xl z-20 overflow-hidden py-1">
+                                            <button onClick={() => { setEditingReplyId({ postId: post.id, replyId: reply.id }); setEditingReplyText(reply.text); setOpenReplyDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-white/5 flex items-center gap-2">
+                                              <Edit2 className="h-3 w-3" /> Edit
+                                            </button>
+                                            {reply.editHistory && reply.editHistory.length > 0 && (
+                                              <button onClick={() => { setPostHistoryToShow(reply.id); setOpenReplyDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-neutral-300 hover:bg-white/5 flex items-center gap-2">
+                                                <History className="h-3 w-3" /> Edit History
+                                              </button>
+                                            )}
+                                            <button onClick={() => { setReplyToDelete({ postId: post.id, replyId: reply.id }); setOpenReplyDropdown(null); }} className="w-full text-left px-3 py-2 text-xs text-red-400 hover:bg-white/5 flex items-center gap-2 border-t border-white/5 mt-1 pt-2">
+                                              <Trash2 className="h-3 w-3" /> Delete
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {editingReplyId?.postId === post.id && editingReplyId?.replyId === reply.id ? (
+                                  <div className="mt-2">
+                                    <textarea
+                                      className="w-full bg-neutral-950 border border-white/[0.08] rounded-xl px-3 py-2 text-[11px] text-white focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                                      value={editingReplyText}
+                                      onChange={(e) => setEditingReplyText(e.target.value)}
+                                      rows={2}
+                                      autoFocus
+                                    />
+                                    <div className="flex justify-end gap-2 mt-2">
+                                      <button onClick={() => setEditingReplyId(null)} className="text-neutral-400 hover:text-white text-[10px] px-2">Cancel</button>
+                                      <button onClick={() => handleEditReplySubmit(post.id, reply.id)} className="bg-purple-600/20 hover:bg-purple-600/40 text-purple-400 border border-purple-500/30 text-[10px] px-3 py-1 rounded-lg transition-colors">Save</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-neutral-400 text-[11px] leading-relaxed whitespace-pre-wrap">{reply.text}</p>
+                                )}
+                                
+                                {/* Reaction Badges */}
+                                {reply.reactions && Object.keys(reply.reactions).length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {Object.entries(reply.reactions).map(([emoji, users]) => {
+                                      if (users.length === 0) return null;
+                                      const hasReacted = userEmail ? users.includes(userEmail) : false;
+                                      return (
+                                        <button
+                                          key={emoji}
+                                          onClick={() => handleToggleReaction(post.id, reply.id, emoji)}
+                                          className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${hasReacted ? 'bg-purple-500/20 border-purple-500/30 text-purple-300' : 'bg-white/5 border-white/10 text-neutral-400 hover:bg-white/10'} transition-colors`}
+                                        >
+                                          <span>{emoji}</span>
+                                          <span>{users.length}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+
+                            {/* Reply Input */}
+                            {replyingToPostId === post.id ? (
+                              <form onSubmit={(e) => handleAddReply(e, post.id)} className="mt-3 flex items-start gap-2">
+                                <CornerDownRight className="h-4 w-4 text-neutral-500 mt-2 shrink-0" />
+                                <div className="flex-grow flex flex-col gap-2">
+                                  <textarea
+                                    placeholder="Write a reply..."
+                                    value={newReplyText}
+                                    onChange={(e) => setNewReplyText(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors resize-none"
+                                    rows={2}
+                                    autoFocus
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <button type="button" onClick={() => setReplyingToPostId(null)} className="text-neutral-400 hover:text-white text-[10px] px-2 font-bold cursor-pointer">Cancel</button>
+                                    <button type="submit" disabled={!newReplyText.trim()} className="bg-white text-black text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-neutral-200 cursor-pointer disabled:opacity-50 transition-colors">Reply</button>
+                                  </div>
+                                </div>
+                              </form>
+                            ) : (
+                              <button onClick={() => setReplyingToPostId(post.id)} className="mt-1 flex items-center gap-1.5 text-[10px] font-bold text-neutral-500 hover:text-purple-400 transition-colors uppercase tracking-wider cursor-pointer">
+                                <CornerDownRight className="h-3 w-3" /> Reply
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2734,6 +3096,141 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
         )}
       </AnimatePresence>
 
+      {/* Post Create Success Modal */}
+      <AnimatePresence>
+        {showPostCreateSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowPostCreateSuccessModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Post Created!</h3>
+              <p className="text-sm text-neutral-400 mb-6">Your announcement has been published to the space feed.</p>
+              <button 
+                onClick={() => setShowPostCreateSuccessModal(false)}
+                className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Post Edit Success Modal */}
+      <AnimatePresence>
+        {showPostEditSuccessModal && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowPostEditSuccessModal(false)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden text-center flex flex-col items-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Post Updated!</h3>
+              <p className="text-sm text-neutral-400 mb-6">Your changes have been saved successfully.</p>
+              <button 
+                onClick={() => setShowPostEditSuccessModal(false)}
+                className="w-full py-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold transition-colors cursor-pointer"
+              >
+                Awesome
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Post Delete Confirmation Modal */}
+      <AnimatePresence>
+        {postToDelete !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setPostToDelete(null)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-red-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col items-center text-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-red-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+                <Trash2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Delete Post?</h3>
+              <p className="text-sm text-neutral-400 mb-6">Are you sure you want to delete this post? This action cannot be undone.</p>
+              
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setPostToDelete(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] text-white font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteFeedPost(postToDelete)}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-colors cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Post Edit History Modal */}
+      <AnimatePresence>
+        {postHistoryToShow !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setPostHistoryToShow(null)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-md rounded-2xl border border-white/10 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-white/10">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2"><History className="h-5 w-5 text-purple-400" /> Edit History</h3>
+                <button onClick={() => setPostHistoryToShow(null)} className="text-neutral-500 hover:text-white transition-colors cursor-pointer">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                {activeSpace?.feed.find(p => p.id === postHistoryToShow)?.editHistory?.map((history, idx) => (
+                  <div key={idx} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                    <div className="text-[10px] font-bold text-neutral-500 mb-2">{history.time}</div>
+                    <p className="text-xs text-neutral-300 whitespace-pre-wrap">{history.text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Undo Toast */}
       <AnimatePresence>
         {deletedTaskState && (
@@ -2759,6 +3256,46 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
             >
               <X className="w-4 h-4" />
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reply Delete Confirmation Modal */}
+      <AnimatePresence>
+        {replyToDelete !== null && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setReplyToDelete(null)}
+          >
+            <div 
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-2xl border border-red-500/30 bg-neutral-950 p-6 shadow-2xl overflow-hidden flex flex-col items-center text-center"
+            >
+              <div className="absolute -top-20 -right-20 h-40 w-40 rounded-full bg-red-500/10 blur-2xl pointer-events-none" />
+              <div className="h-16 w-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-4">
+                <Trash2 className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Delete Reply?</h3>
+              <p className="text-sm text-neutral-400 mb-6">Are you sure you want to delete this reply? This action cannot be undone.</p>
+              
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setReplyToDelete(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.02] hover:bg-white/[0.05] text-white font-medium transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteReply(replyToDelete.postId, replyToDelete.replyId)}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-colors cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

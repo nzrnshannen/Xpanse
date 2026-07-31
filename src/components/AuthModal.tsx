@@ -89,24 +89,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
 
-    // Simulate API request to backend (FastAPI proxy mock)
-    setTimeout(() => {
+    try {
+      const endpoint = mode === 'signup' ? '/api/v1/auth/signup' : '/api/v1/auth/login';
+      const body = mode === 'signup' 
+        ? { name: formData.fullName, email: formData.email, password: formData.password }
+        : { email: formData.email, password: formData.password };
+
+      // Replace hardcoded localhost with an environment variable if available, else default to 8000
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      
+      const response = await fetch(`${apiUrl}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle specific error from backend
+        setErrors({ email: data.detail || 'Authentication failed' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Store token
+      if (data.access_token) {
+        localStorage.setItem('xpanse_token', data.access_token);
+      }
+
       setIsSubmitting(false);
       setSubmitSuccess(true);
       
-      // Auto close modal after successful mockup authentication
       setTimeout(() => {
         setSubmitSuccess(false);
         onClose();
         onAuthSuccess(formData.email);
       }, 1500);
-    }, 1200);
+      
+    } catch (error) {
+      console.error('Authentication error:', error);
+      setErrors({ email: 'Network error. Please try again later.' });
+      setIsSubmitting(false);
+    }
   };
 
   const handleOutsideClick = (e: React.MouseEvent) => {

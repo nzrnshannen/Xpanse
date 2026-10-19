@@ -1,7 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, model_validator
-from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 from app.database import get_session
 from app.models.domain import Board, BoardColumn, Task, Space
 
@@ -70,16 +72,15 @@ async def get_preset_labels():
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_board(
     data: BoardCreateRequest,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    space = session.get(Space, data.space_id)
+    space = await session.get(Space, data.space_id)
     if not space:
         raise HTTPException(status_code=404, detail="Space not found")
-        
+
     new_board = Board(space_id=data.space_id, name=data.name)
     session.add(new_board)
-    session.commit()
-    session.refresh(new_board)
+    await session.flush()  # assigns new_board.id
 
     # Create default columns
     cols = [
@@ -88,8 +89,8 @@ async def create_board(
         BoardColumn(board_id=new_board.id, name="Done", position=2)
     ]
     session.add_all(cols)
-    session.commit()
-    session.refresh(new_board)
+    await session.commit()
+    await session.refresh(new_board)
     return new_board
 
 # Column Endpoints
@@ -97,14 +98,19 @@ async def create_board(
 @router.get("/{board_id}/columns")
 async def get_columns(
     board_id: int,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    board = session.get(Board, board_id)
+    board = await session.get(Board, board_id)
     if not board:
         raise HTTPException(status_code=404, detail="Board not found")
-    
-    statement = select(BoardColumn).where(BoardColumn.board_id == board_id).order_by(BoardColumn.position)
-    columns = session.exec(statement).all()
+
+    statement = (
+        select(BoardColumn)
+        .where(BoardColumn.board_id == board_id)
+        .order_by(BoardColumn.position)
+        .options(selectinload(BoardColumn.tasks))
+    )
+    columns = (await session.exec(statement)).all()
     
     # Return with tasks
     result = []
@@ -123,20 +129,20 @@ async def get_columns(
 async def create_column(
     board_id: int,
     data: BoardColumnCreate,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    board = session.get(Board, board_id)
+    board = await session.get(Board, board_id)
     if not board:
         raise HTTPException(status_code=404, detail="Board not found")
-        
+
     statement = select(BoardColumn).where(BoardColumn.board_id == board_id).order_by(BoardColumn.position.desc())
-    last_col = session.exec(statement).first()
+    last_col = (await session.exec(statement)).first()
     next_pos = last_col.position + 1 if last_col else 0
 
     new_column = BoardColumn(board_id=board_id, name=data.name, position=next_pos)
     session.add(new_column)
-    session.commit()
-    session.refresh(new_column)
+    await session.commit()
+    await session.refresh(new_column)
     
     return {
         "id": new_column.id,
@@ -150,64 +156,67 @@ async def create_column(
 async def reorder_columns(
     board_id: int,
     items: List[ColumnReorderItem],
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    board = session.get(Board, board_id)
+    board = await session.get(Board, board_id)
     if not board:
         raise HTTPException(status_code=404, detail="Board not found")
-        
+
     for item in items:
-        col = session.get(BoardColumn, item.column_id)
+        col = await session.get(BoardColumn, item.column_id)
         if col and col.board_id == board_id:
             col.position = item.position
             session.add(col)
-            
-    session.commit()
+
+    await session.commit()
     return {"success": True}
 
 @router.put("/columns/{column_id}")
 async def update_column(
     column_id: int,
     data: BoardColumnUpdate,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    column = session.get(BoardColumn, column_id)
+    column = await session.get(BoardColumn, column_id)
     if not column:
         raise HTTPException(status_code=404, detail="Column not found")
-        
+
     if data.name is not None:
         column.name = data.name
     if data.position is not None:
         column.position = data.position
-        
+
     session.add(column)
-    session.commit()
-    session.refresh(column)
+    await session.commit()
+    await session.refresh(column)
     return column
 
 @router.delete("/columns/{column_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_column(
     column_id: int,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    column = session.get(BoardColumn, column_id)
+    column = await session.get(BoardColumn, column_id)
     if not column:
         raise HTTPException(status_code=404, detail="Column not found")
-        
+
     board_id = column.board_id
-    
-    # Safe delete strategy: check if there are tasks. 
+
+    # Safe delete strategy: check if there are tasks.
     # Let's move them to the first available column (that isn't this one)
     statement = select(BoardColumn).where(BoardColumn.board_id == board_id, BoardColumn.id != column_id).order_by(BoardColumn.position)
-    first_col = session.exec(statement).first()
-    
-    if first_col and column.tasks:
-        for t in column.tasks:
+    first_col = (await session.exec(statement)).first()
+
+    if first_col:
+        tasks = (await session.exec(select(Task).where(Task.column_id == column_id))).all()
+        for t in tasks:
             t.column_id = first_col.id
             session.add(t)
-            
-    session.delete(column)
-    session.commit()
+        # Flush the move first so the column's delete cascade doesn't take the tasks with it
+        await session.flush()
+
+    await session.delete(column)
+    await session.commit()
     return None
 
 # Task Endpoints
@@ -216,14 +225,14 @@ async def delete_column(
 async def create_task(
     column_id: int,
     data: TaskCreateRequest,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    column = session.get(BoardColumn, column_id)
+    column = await session.get(BoardColumn, column_id)
     if not column:
         raise HTTPException(status_code=404, detail="Column not found")
-        
+
     statement = select(Task).where(Task.column_id == column_id).order_by(Task.position.desc())
-    last_task = session.exec(statement).first()
+    last_task = (await session.exec(statement)).first()
     next_pos = last_task.position + 1 if last_task else 0
     
     new_task = Task(
@@ -235,17 +244,17 @@ async def create_task(
         labels=[label.model_dump() for label in data.labels] if data.labels is not None else []
     )
     session.add(new_task)
-    session.commit()
-    session.refresh(new_task)
+    await session.commit()
+    await session.refresh(new_task)
     return new_task
 
 @router.put("/tasks/{task_id}")
 async def update_task(
     task_id: int,
     data: TaskUpdateRequest,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    task = session.get(Task, task_id)
+    task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
         
@@ -263,19 +272,19 @@ async def update_task(
         task.labels = [label.model_dump() for label in data.labels]
         
     session.add(task)
-    session.commit()
-    session.refresh(task)
+    await session.commit()
+    await session.refresh(task)
     return task
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
     task_id: int,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ):
-    task = session.get(Task, task_id)
+    task = await session.get(Task, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-        
-    session.delete(task)
-    session.commit()
+
+    await session.delete(task)
+    await session.commit()
     return None

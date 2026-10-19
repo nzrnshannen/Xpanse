@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 from app.database import get_session
 
 router = APIRouter(prefix="/gcs", tags=["Real-time Chat & WebSockets"])
@@ -45,7 +45,7 @@ manager = ConnectionManager()
 @router.get("/rooms/{room_id}/messages", response_model=List[ChatMessageResponse])
 async def get_chat_history(
     room_id: int, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> List[ChatMessageResponse]:
     """
     HTTP endpoint to fetch historic room chat logs.
@@ -73,7 +73,7 @@ async def get_chat_history(
 async def post_message_http(
     room_id: int,
     data: PostMessageRequest,
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> ChatMessageResponse:
     """
     HTTP POST fallback to send a message to a chat room without WebSocket connectivity.

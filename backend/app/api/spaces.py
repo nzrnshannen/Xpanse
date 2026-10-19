@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.config import settings
 from app.database import get_session
 
@@ -25,7 +25,7 @@ class InviteCodeResponse(BaseModel):
 @router.post("/", response_model=SpaceResponse, status_code=status.HTTP_201_CREATED)
 async def create_space(
     data: SpaceCreateRequest, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> SpaceResponse:
     """
     Creates a new collaboration Space workspace container.
@@ -35,7 +35,7 @@ async def create_space(
 
 @router.get("/", response_model=List[SpaceResponse])
 async def list_spaces(
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> List[SpaceResponse]:
     """
     List all workspaces where the current user is owner or member.
@@ -48,7 +48,7 @@ async def list_spaces(
 @router.get("/{space_id}", response_model=SpaceResponse)
 async def get_space(
     space_id: int, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> SpaceResponse:
     """
     Get detailed information about a specific Space.
@@ -64,7 +64,7 @@ async def get_space(
 async def update_space(
     space_id: int, 
     data: SpaceUpdateRequest, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> SpaceResponse:
     """
     Update space metadata (e.g. rename workspace).
@@ -75,7 +75,7 @@ async def update_space(
 @router.delete("/{space_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_space(
     space_id: int, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> None:
     """
     Permanently delete a space workspace container and all linked resources.
@@ -85,7 +85,7 @@ async def delete_space(
 @router.post("/{space_id}/invite", response_model=InviteCodeResponse)
 async def generate_invite(
     space_id: int, 
-    session: Session = Depends(get_session)
+    session: AsyncSession = Depends(get_session)
 ) -> InviteCodeResponse:
     """
     Generates a secure invite link to join this Space workspace.

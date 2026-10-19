@@ -4,7 +4,7 @@ import tempfile
 from typing import List, Dict, Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, UploadFile, File
 from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.database import get_session
 from app.models.domain import Meeting, MeetingMinute, Room
@@ -59,8 +59,8 @@ async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, se
 
 @router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute)
 async def get_meeting_minutes(meeting_id: int, session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id))
-    minute = result.scalars().first()
+    result = await session.exec(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id))
+    minute = result.first()
     if not minute:
         raise HTTPException(status_code=404, detail="Minutes not found for this meeting")
     return minute

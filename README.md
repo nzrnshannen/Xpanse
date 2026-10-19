@@ -59,6 +59,8 @@ Xpanse is a high-performance, real-time team collaboration ecosystem built utili
 
 2. Set up the virtual environment, install dependencies, and configure the `.env` file based on `.env.example`.
 
+3. Set `SECRET_KEY` to a random value (`openssl rand -hex 32`). The server refuses to start without one unless `DEBUG=True`. Never commit `.env`; on a hosting provider, set these values in its environment settings instead.
+
 ## Architecture Overview
 
 Xpanse operates as a decoupled full-stack application. The frontend utilizes React for state preservation, reactive rendering, and persistent canvas management. The backend leverages FastAPI for REST endpoints and a WebSocket router for real-time messaging, Kanban sync, and the streaming AI bot. PostgreSQL handles hierarchical access controls and data storage, while Redis powers Pub/Sub mechanisms to mirror WebSocket messages.

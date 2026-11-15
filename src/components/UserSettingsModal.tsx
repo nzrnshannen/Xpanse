@@ -22,6 +22,8 @@ export interface UserProfile {
   avatarColor?: string;
 }
 
+type FontSize = 'small' | 'medium' | 'large' | 'xlarge';
+
 interface UserSettingsModalProps {
   profile: UserProfile;
   onClose: () => void;
@@ -43,11 +45,11 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'profile' | 'appearance' | 'security' | 'danger'>('profile');
 
   // Appearance State
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>(() => {
-    return (localStorage.getItem('xpanse_font_size') as any) || 'medium';
+  const [fontSize, setFontSize] = useState<FontSize>(() => {
+    return (localStorage.getItem('xpanse_font_size') as FontSize | null) || 'medium';
   });
 
-  const handleFontSizeChange = (size: 'small' | 'medium' | 'large' | 'xlarge') => {
+  const handleFontSizeChange = (size: FontSize) => {
     setFontSize(size);
     localStorage.setItem('xpanse_font_size', size);
     document.documentElement.setAttribute('data-font-size', size);
@@ -325,7 +327,7 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = ({
                     ].map((option) => (
                       <button
                         key={option.id}
-                        onClick={() => handleFontSizeChange(option.id as any)}
+                        onClick={() => handleFontSizeChange(option.id as FontSize)}
                         className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all cursor-pointer ${fontSize === option.id ? 'bg-purple-500/10 border-purple-500/50' : 'bg-neutral-900 border-white/10 hover:border-white/20'}`}
                       >
                         <div className="text-left">

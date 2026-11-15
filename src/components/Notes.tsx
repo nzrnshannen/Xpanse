@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, UserPlus, FileText, Share2, Trash2, Bold, Italic, List, ListOrdered, ImageIcon } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import type { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 
@@ -560,7 +561,7 @@ export const Notes: React.FC = () => {
 // TIPTAP EDITOR COMPONENT
 // ==========================================
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor }: { editor: Editor | null }) => {
   if (!editor) return null;
 
   const addImage = () => {

@@ -1,14 +1,11 @@
-import os
-import shutil
-import tempfile
-from typing import List, Dict, Any
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, UploadFile, File
+from typing import List, Dict
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.deps import authenticate_websocket, get_current_user
 from app.database import get_session
-from app.models.domain import Meeting, MeetingMinute, Room
+from app.models.domain import MeetingMinute, Room
 
 router = APIRouter(tags=["meetings"])
 

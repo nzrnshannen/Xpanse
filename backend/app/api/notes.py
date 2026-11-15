@@ -6,7 +6,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.api.deps import get_current_user
 from app.database import get_session
-from app.models.domain import User, Space, Note, NoteChapter
+from app.models.domain import User, Note, NoteChapter
 from app.models.bridges import SpaceMemberLink, NoteCollaboratorLink
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
@@ -173,9 +173,12 @@ async def update_chapter(
     chapter: NoteChapter = Depends(verify_chapter_access(required_role='editor')),
     session: AsyncSession = Depends(get_session)
 ):
-    if data.title is not None: chapter.title = data.title
-    if data.content is not None: chapter.content = data.content
-    if data.order_index is not None: chapter.order_index = data.order_index
+    if data.title is not None:
+        chapter.title = data.title
+    if data.content is not None:
+        chapter.content = data.content
+    if data.order_index is not None:
+        chapter.order_index = data.order_index
     
     return ChapterResponse(
         id=chapter.id,

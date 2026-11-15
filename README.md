@@ -61,7 +61,9 @@ Xpanse is a high-performance, real-time team collaboration ecosystem built utili
 
 3. Set `SECRET_KEY` to a random value (`openssl rand -hex 32`). The server refuses to start without one unless `DEBUG=True`. Never commit `.env`; on a hosting provider, set these values in its environment settings instead.
 
-4. To run the tests, install `requirements-dev.txt` and run `pytest` from `backend/`. They use a throwaway SQLite database.
+4. To run the tests, install `requirements-dev.txt` and run `pytest` from `backend/`. They use a throwaway SQLite database. Lint with `ruff check .`.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs these on every pull request and on pushes to `master`, together with `npm run lint` and `npm run build` for the frontend.
 
 API routes require an `Authorization: Bearer <token>` header. WebSockets can't send headers from a browser, so they take the token as a `?token=` query param and close with code `1008` if it's invalid.
 

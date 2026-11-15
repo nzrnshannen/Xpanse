@@ -1,13 +1,11 @@
-import os
-import shutil
-import tempfile
-from typing import List, Dict, Any
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, UploadFile, File
+from typing import List, Dict
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException
 from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.deps import authenticate_websocket, get_current_user
 from app.database import get_session
-from app.models.domain import Meeting, MeetingMinute, Room
+from app.models.domain import MeetingMinute, Room
 
 router = APIRouter(tags=["meetings"])
 
@@ -39,6 +37,9 @@ manager = ConnectionManager()
 
 @router.websocket("/spaces/{space_id}/meetings/{room_id}")
 async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, session: AsyncSession = Depends(get_session)):
+    if not await authenticate_websocket(websocket):
+        return
+
     room = await session.get(Room, room_id)
     if not room or room.space_id != space_id:
         await websocket.close(code=4004)
@@ -57,10 +58,10 @@ async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, se
 
 
 
-@router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute)
+@router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute, dependencies=[Depends(get_current_user)])
 async def get_meeting_minutes(meeting_id: int, session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id))
-    minute = result.scalars().first()
+    result = await session.exec(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id))
+    minute = result.first()
     if not minute:
         raise HTTPException(status_code=404, detail="Minutes not found for this meeting")
     return minute

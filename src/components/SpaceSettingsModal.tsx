@@ -19,6 +19,8 @@ const PRESET_COLORS = [
   '#f43f5e', // Rose
   '#64748b', // Slate
 ];
+export type SpaceUpdates = { name?: string; color?: string; icon?: string };
+
 interface SpaceSettingsModalProps {
   spaceId: number;
   spaceName: string;
@@ -28,7 +30,7 @@ interface SpaceSettingsModalProps {
   members: SpaceMember[];
   currentUserEmail: string;
   onClose: () => void;
-  onUpdateSpace: (updates: any) => void;
+  onUpdateSpace: (updates: SpaceUpdates) => void;
   onUpdateMemberRole: (memberId: string, newRole: SpaceMember['role']) => void;
   onRemoveMember: (memberId: string, message?: string) => void;
   onTransferOwnership: (newOwnerId: string) => void;
@@ -109,7 +111,7 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
   };
 
   const commitProfileChanges = () => {
-    const updates: any = { color, icon: profileImage };
+    const updates: SpaceUpdates = { color, icon: profileImage };
     if (name !== initialName) {
       updates.name = name;
       triggerToast('Email notifications dispatched to all members regarding Space Name change.');
@@ -427,7 +429,7 @@ export const SpaceSettingsModal: React.FC<SpaceSettingsModalProps> = ({
                             <select
                               value={member.role}
                               disabled={!isAdmin || member.email === ownerId || (member.role === 'admin' && !isOwner && member.email !== currentUserEmail)}
-                              onChange={(e) => onUpdateMemberRole(member.id, e.target.value as any)}
+                              onChange={(e) => onUpdateMemberRole(member.id, e.target.value as SpaceMember['role'])}
                               className="bg-neutral-900 border border-white/[0.1] rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500 disabled:opacity-50"
                             >
                               <option value="admin">Admin</option>

@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Video, VideoOff, Settings, X, Upload, Volume2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-// Using any for Results since we don't have the type imported anymore
-type Results = any;
+import type { Results, SelfieSegmentation } from '@mediapipe/selfie_segmentation';
+
+// SelfieSegmentation is loaded from the CDN at runtime; webkitAudioContext is the prefixed name in older Safari
+type BrowserWindow = Window & { SelfieSegmentation?: typeof SelfieSegmentation; webkitAudioContext?: typeof AudioContext };
 
 interface PreJoinModalProps {
   onJoin: (isMuted: boolean, isVideoOff: boolean) => void;
@@ -34,7 +36,7 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   const animationFrameRef = useRef<number>(0);
   const mountedRef = useRef(true);
   
-  const selfieSegmentationRef = useRef<any>(null);
+  const selfieSegmentationRef = useRef<SelfieSegmentation | null>(null);
   const videoFrameRef = useRef<number>(0);
   const isVideoProcessingRef = useRef(false);
   
@@ -128,7 +130,7 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
   };
 
   useEffect(() => {
-    const windowSelfie = (window as any).SelfieSegmentation;
+    const windowSelfie = (window as BrowserWindow).SelfieSegmentation;
 
     if (!windowSelfie) {
       console.error("MediaPipe SelfieSegmentation not loaded from CDN yet.");
@@ -258,7 +260,7 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
             
             if (isVideoProcessingRef.current) {
               if ('requestVideoFrameCallback' in videoRef.current) {
-                (videoRef.current as any).requestVideoFrameCallback(processFrame);
+                videoRef.current.requestVideoFrameCallback(processFrame);
               } else {
                 videoFrameRef.current = requestAnimationFrame(processFrame);
               }
@@ -274,7 +276,7 @@ export function PreJoinModal({ onJoin, onClose }: PreJoinModalProps) {
       }
 
       if (!isMuted && stream.getAudioTracks().length > 0) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = new (window.AudioContext || (window as BrowserWindow).webkitAudioContext)();
         analyserRef.current = audioContextRef.current.createAnalyser();
         const source = audioContextRef.current.createMediaStreamSource(stream);
         source.connect(analyserRef.current);

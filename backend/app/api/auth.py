@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from sqlmodel import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
+from app.api.deps import get_current_user
 from app.database import get_session
 from app.models.domain import User
 from app.core.security import get_password_hash, verify_password, create_access_token
@@ -21,8 +22,24 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Get the logged-in user"
+)
+async def read_current_user(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Returns the profile of the user the token belongs to.
+    """
+    return current_user
+
 @router.post(
-    "/signup", 
+    "/signup",
     response_model=TokenResponse, 
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user account"
@@ -35,8 +52,8 @@ async def signup(
     Registers a new user and returns a JWT token.
     """
     # Check if user already exists
-    result = await session.execute(select(User).where(User.email == data.email))
-    existing_user = result.scalars().first()
+    result = await session.exec(select(User).where(User.email == data.email))
+    existing_user = result.first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -70,8 +87,8 @@ async def login(
     Authenticates user credentials and returns a JWT token.
     """
     # Query user by email
-    result = await session.execute(select(User).where(User.email == data.email))
-    user = result.scalars().first()
+    result = await session.exec(select(User).where(User.email == data.email))
+    user = result.first()
     
     # Verify user exists and password is correct
     if not user or not verify_password(data.password, user.hashed_password):

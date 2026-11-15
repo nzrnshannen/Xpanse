@@ -99,6 +99,8 @@ interface Message {
   };
 }
 
+type MeetingMinutes = NonNullable<Message['minutesData']>;
+
 interface MockChannel {
   id: string;
   name: string;
@@ -290,7 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
   const [initialCallIsVideoOff, setInitialCallIsVideoOff] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [showMeetingMinutesModal, setShowMeetingMinutesModal] = useState(false);
-  const [activeMinutesData, setActiveMinutesData] = useState<any>(null);
+  const [activeMinutesData, setActiveMinutesData] = useState<MeetingMinutes | undefined>(undefined);
   const [isGeneratingMinutes, setIsGeneratingMinutes] = useState(false);
   const [generationSuccess, setGenerationSuccess] = useState(false);
   const [callStartTime, setCallStartTime] = useState<number | null>(null);
@@ -834,12 +836,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
     setActiveCallMessageId(null);
   };
 
-  const handleViewMinutes = (minutesData: any) => {
+  const handleViewMinutes = (minutesData?: MeetingMinutes) => {
     setActiveMinutesData(minutesData);
     setShowMeetingMinutesModal(true);
   };
 
-  const handleDownloadMinutes = (minutesData: any) => {
+  const handleDownloadMinutes = (minutesData?: MeetingMinutes) => {
     if (!minutesData) return;
     
     const content = `# Meeting Minutes - ${minutesData.date}
@@ -848,10 +850,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout, userEmail }) => 
 ${minutesData.summary}
 
 ## Key Decisions
-${minutesData.decisions.map((d: string) => `- ${d}`).join('\n')}
+${minutesData.decisions.map((d) => `- ${d}`).join('\n')}
 
 ## Action Items
-${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assignee})`).join('\n')}
+${minutesData.actionItems.map((a) => `- [ ] ${a.title} (Assignee: ${a.assignee})`).join('\n')}
 `;
 
     const blob = new Blob([content], { type: 'text/markdown' });
@@ -1348,7 +1350,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
               if (!taskToMove) return b;
 
               // Filter out the task being moved
-              let newTasks = b.tasks.filter(t => t.id !== taskId);
+              const newTasks = b.tasks.filter(t => t.id !== taskId);
 
               // Get tasks in target column sorted by position
               const targetColTasks = newTasks
@@ -3757,7 +3759,7 @@ ${minutesData.actionItems.map((a: any) => `- [ ] ${a.title} (Assignee: ${a.assig
           <MeetingMinutesModal 
             onClose={() => {
               setShowMeetingMinutesModal(false);
-              setActiveMinutesData(null);
+              setActiveMinutesData(undefined);
             }}
             onConvertToTask={handleConvertToTask}
             minutesData={activeMinutesData}

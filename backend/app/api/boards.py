@@ -4,10 +4,11 @@ from pydantic import BaseModel, model_validator
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from app.api.deps import get_current_user
 from app.database import get_session
 from app.models.domain import Board, BoardColumn, Task, Space
 
-router = APIRouter(prefix="/boards", tags=["Boards & Tasks"])
+router = APIRouter(prefix="/boards", tags=["Boards & Tasks"], dependencies=[Depends(get_current_user)])
 
 # Pydantic Schemas
 

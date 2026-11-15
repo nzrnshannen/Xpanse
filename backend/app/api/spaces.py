@@ -2,10 +2,11 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+from app.api.deps import get_current_user
 from app.core.config import settings
 from app.database import get_session
 
-router = APIRouter(prefix="/spaces", tags=["Spaces"])
+router = APIRouter(prefix="/spaces", tags=["Spaces"], dependencies=[Depends(get_current_user)])
 
 class SpaceCreateRequest(BaseModel):
     name: str

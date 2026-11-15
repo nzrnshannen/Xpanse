@@ -2,8 +2,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
+from app.api.deps import authenticate_websocket, get_current_user
 from app.database import get_session
 
+# Auth is set per route here: HTTP dependencies don't work on the WebSocket route
 router = APIRouter(prefix="/gcs", tags=["Real-time Chat & WebSockets"])
 
 class ChatMessageResponse(BaseModel):
@@ -42,7 +44,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@router.get("/rooms/{room_id}/messages", response_model=List[ChatMessageResponse])
+@router.get("/rooms/{room_id}/messages", response_model=List[ChatMessageResponse], dependencies=[Depends(get_current_user)])
 async def get_chat_history(
     room_id: int, 
     session: AsyncSession = Depends(get_session)
@@ -69,7 +71,7 @@ async def get_chat_history(
         )
     ]
 
-@router.post("/rooms/{room_id}/messages", response_model=ChatMessageResponse)
+@router.post("/rooms/{room_id}/messages", response_model=ChatMessageResponse, dependencies=[Depends(get_current_user)])
 async def post_message_http(
     room_id: int,
     data: PostMessageRequest,
@@ -93,6 +95,9 @@ async def websocket_chat_endpoint(websocket: WebSocket, room_id: int) -> None:
     WebSocket endpoint for real-time bi-directional team communication.
     Broadcasts incoming payloads to all users connected to the same room.
     """
+    if not await authenticate_websocket(websocket):
+        return
+
     await manager.connect(websocket, room_id)
     
     # Broadcast join event

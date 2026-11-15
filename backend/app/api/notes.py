@@ -4,21 +4,12 @@ from pydantic import BaseModel
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from app.api.deps import get_current_user
 from app.database import get_session
 from app.models.domain import User, Space, Note, NoteChapter
 from app.models.bridges import SpaceMemberLink, NoteCollaboratorLink
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
-
-# Mock dependency for getting the current user since auth isn't fully implemented
-async def get_current_user(session: AsyncSession = Depends(get_session)) -> User:
-    # In a real app, this would extract the user from a JWT token
-    # For now, we mock returning user ID 1
-    user = await session.get(User, 1)
-    if not user:
-        # Create a mock user if one doesn't exist for testing
-        user = User(id=1, name="Test User", email="test@example.com", hashed_password="mock")
-    return user
 
 class ChapterResponse(BaseModel):
     id: int

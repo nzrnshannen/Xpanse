@@ -6,6 +6,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPExce
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.api.deps import authenticate_websocket, get_current_user
 from app.database import get_session
 from app.models.domain import Meeting, MeetingMinute, Room
 
@@ -39,6 +40,9 @@ manager = ConnectionManager()
 
 @router.websocket("/spaces/{space_id}/meetings/{room_id}")
 async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, session: AsyncSession = Depends(get_session)):
+    if not await authenticate_websocket(websocket):
+        return
+
     room = await session.get(Room, room_id)
     if not room or room.space_id != space_id:
         await websocket.close(code=4004)
@@ -57,7 +61,7 @@ async def meeting_endpoint(websocket: WebSocket, space_id: int, room_id: int, se
 
 
 
-@router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute)
+@router.get("/meetings/{meeting_id}/minutes", response_model=MeetingMinute, dependencies=[Depends(get_current_user)])
 async def get_meeting_minutes(meeting_id: int, session: AsyncSession = Depends(get_session)):
     result = await session.exec(select(MeetingMinute).where(MeetingMinute.meeting_id == meeting_id))
     minute = result.first()
